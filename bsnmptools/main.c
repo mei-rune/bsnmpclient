@@ -50,9 +50,9 @@
 
 #include <bsnmp/asn1.h>
 #include <bsnmp/snmp.h>
-#include <bsnmp/snmpclient.h>
-#include "bsnmp/tc.h"
-#include "bsnmp/tools.h"
+#include <bsnmp/client.h>
+#include "bsnmptc.h"
+#include "bsnmptools.h"
 #ifdef _WIN32
 
 #define socket_t    SOCKET
@@ -484,7 +484,7 @@ snmptool_get(struct snmp_toolinfo *snmptoolctx)
 			break;
 		}
 
-		if (snmp_validate_resp(&resp, &req) == SNMP_CODE_OK) {
+		if (snmp_pdu_check(&resp, &req) == SNMP_CODE_OK) {
 			snmp_output_resp(snmptoolctx, &resp);
 			break;
 		}
@@ -560,7 +560,7 @@ snmptool_walk(struct snmp_toolinfo *snmptoolctx)
 		outputs = 0;
 		while (snmp_dialog(&snmptoolctx->client, &req, &resp) >= 0) {
 			int continue_ok = 1;
-			switch(snmp_validate_resp(&resp, &req))
+			switch(snmp_pdu_check(&resp, &req))
 			{
 			case SNMP_CODE_OK:
 				continue_ok = 1;
@@ -598,7 +598,7 @@ snmptool_walk(struct snmp_toolinfo *snmptoolctx)
 		if (outputs == 0) {
 			snmpwalk_nextpdu_create(&snmptoolctx->client, SNMP_PDU_GET, &root, &req);
 			if (snmp_dialog(&snmptoolctx->client, &req, &resp) == SNMP_CODE_OK) {
-				if (snmp_validate_resp(&resp, &req) == SNMP_CODE_OK)
+				if (snmp_pdu_check(&resp, &req) == SNMP_CODE_OK)
 					snmp_output_err_resp(snmptoolctx, &resp);
 				else
 					snmp_output_resp(snmptoolctx, &(resp));
@@ -1170,7 +1170,7 @@ snmptool_set(struct snmp_toolinfo *snmptoolctx)
 			break;
 		}
 
-		if (snmp_pdu_check(&req, &resp) > 0) {
+		if (snmp_pdu_check(&req, &resp) == SNMP_CODE_OK) {
 			if (GET_OUTPUT(snmptoolctx) != OUTPUT_QUIET)
 				snmp_output_resp(snmptoolctx, &resp);
 			break;

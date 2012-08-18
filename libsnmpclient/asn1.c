@@ -30,7 +30,7 @@
  *
  * ASN.1 for SNMP.
  */
-#include "config.h"
+#include "bsnmp/config.h"
 #include <sys/types.h>
 #include <stdio.h>
 #include <stdlib.h>

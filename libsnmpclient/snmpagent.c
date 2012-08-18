@@ -30,14 +30,9 @@
  *
  * SNMP Agent functions
  */
-#include "config.h"
+#include "bsnmp/config.h"
 #include <sys/types.h>
-
-#ifdef _WIN32
-#include "compat/sys/queue.h"
-#else
 #include <sys/queue.h>
-#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <stddef.h>
@@ -51,7 +46,7 @@
 
 #include "bsnmp/asn1.h"
 #include "bsnmp/snmp.h"
-#include "bsnmp/snmpagent.h"
+#include "bsnmp/agent.h"
 #include "support.h"
 #include "snmppriv.h"
 

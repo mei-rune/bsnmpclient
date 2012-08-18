@@ -28,7 +28,7 @@
  *
  * $FreeBSD$
  */
-#include "config.h"
+#include "bsnmp/config.h"
 #include <sys/types.h>
 #ifndef _WIN32
 #include <sys/socket.h>

@@ -33,7 +33,7 @@
 
 #include <stdint.h>
 #include <sys/queue.h>
-#include "bsnmp/snmpclient.h"
+#include "bsnmp/client.h"
 
 #ifndef _WIN32
 #define COMPAT_SLIST_ENTRY SLIST_ENTRY

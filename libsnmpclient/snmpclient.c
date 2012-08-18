@@ -34,13 +34,11 @@
 *
 * Support functions for SNMP clients.
 */
-#include "config.h"
+#include "bsnmp/config.h"
 #include <sys/types.h>
-#ifdef _WIN32
-#include "compat/sys/queue.h"
-#else
-#include <sys/time.h>
 #include <sys/queue.h>
+#ifndef _WIN32
+#include <sys/time.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 #endif
@@ -69,7 +67,7 @@
 
 #include "bsnmp/asn1.h"
 #include "bsnmp/snmp.h"
-#include "bsnmp/snmpclient.h"
+#include "bsnmp/client.h"
 #include "support.h"
 #include "snmppriv.h"
 
@@ -1497,167 +1495,6 @@ int snmp_receive(struct snmp_client* client, int blocking)
     snmp_pdu_free(resp);
     free(resp);
     return (ret);
-}
-
-
-/*
-* Check a GETNEXT response. Here we have three possible outcomes: -1 an
-* unexpected error happened. +1 response is ok and is within the table 0
-* response is ok, but is behind the table or error is NOSUCHNAME. The req
-* should point to a template PDU which contains the base OIDs and the
-* syntaxes. This is really only useful to sweep non-sparse tables.
-*/
-static int ok_getnext(const struct snmp_pdu * req, const struct snmp_pdu * resp)
-{
-    u_int i;
-
-    if (resp->version != req->version) {
-        warnx("SNMP GETNEXT: response has wrong version");
-        return (-1);
-    }
-
-    if (resp->error_status == SNMP_ERR_NOSUCHNAME)
-        return (0);
-
-    if (resp->error_status != SNMP_ERR_NOERROR) {
-        warnx("SNMP GETNEXT: error %d", resp->error_status);
-        return (-1);
-    }
-    if (resp->nbindings != req->nbindings) {
-        warnx("SNMP GETNEXT: bad number of bindings in response");
-        return (-1);
-    }
-    for (i = 0; i < req->nbindings; i++) {
-        if (!asn_is_suboid(&req->bindings[i].var,
-            &resp->bindings[i].var)) {
-                if (i != 0)
-                    warnx("SNMP GETNEXT: inconsistent table "
-                    "response");
-                return (0);
-        }
-        if (resp->version != SNMP_V1 &&
-            resp->bindings[i].syntax == SNMP_SYNTAX_ENDOFMIBVIEW)
-            return (0);
-
-        if (resp->bindings[i].syntax != req->bindings[i].syntax) {
-            warnx("SNMP GETNEXT: bad syntax in response");
-            return (0);
-        }
-    }
-    return (1);
-}
-
-/*
-* Check a GET response. Here we have three possible outcomes: -1 an
-* unexpected error happened. +1 response is ok. 0 NOSUCHNAME The req should
-* point to a template PDU which contains the OIDs and the syntaxes. This
-* is only useful for SNMPv1 or single object GETS.
-*/
-static int ok_get(const struct snmp_pdu * req, const struct snmp_pdu * resp)
-{
-    u_int i;
-
-    if (resp->version != req->version) {
-        warnx("SNMP GET: response has wrong version");
-        return (-1);
-    }
-
-    if (resp->error_status == SNMP_ERR_NOSUCHNAME)
-        return (0);
-
-    if (resp->error_status != SNMP_ERR_NOERROR) {
-        warnx("SNMP GET: error %d", resp->error_status);
-        return (-1);
-    }
-
-    if (resp->nbindings != req->nbindings) {
-        warnx("SNMP GET: bad number of bindings in response");
-        return (-1);
-    }
-    for (i = 0; i < req->nbindings; i++) {
-        if (asn_compare_oid(&req->bindings[i].var,
-            &resp->bindings[i].var) != 0) {
-                warnx("SNMP GET: bad OID in response");
-                return (-1);
-        }
-        if (resp->version != SNMP_V1 &&
-            (resp->bindings[i].syntax == SNMP_SYNTAX_NOSUCHOBJECT ||
-            resp->bindings[i].syntax == SNMP_SYNTAX_NOSUCHINSTANCE))
-            return (0);
-        if (resp->bindings[i].syntax != req->bindings[i].syntax) {
-            warnx("SNMP GET: bad syntax in response");
-            return (-1);
-        }
-    }
-    return (1);
-}
-
-/*
-* Check the response to a SET PDU. We check: - the error status must be 0 -
-* the number of bindings must be equal in response and request - the
-* syntaxes must be the same in response and request - the OIDs must be the
-* same in response and request
-*/
-static int ok_set(const struct snmp_pdu * req, const struct snmp_pdu * resp)
-{
-    u_int i;
-
-    if (resp->version != req->version) {
-        warnx("SNMP SET: response has wrong version");
-        return (-1);
-    }
-
-    if (resp->error_status == SNMP_ERR_NOSUCHNAME) {
-        warnx("SNMP SET: error %d", resp->error_status);
-        return (0);
-    }
-    if (resp->error_status != SNMP_ERR_NOERROR) {
-        warnx("SNMP SET: error %d", resp->error_status);
-        return (-1);
-    }
-
-    if (resp->nbindings != req->nbindings) {
-        warnx("SNMP SET: bad number of bindings in response");
-        return (-1);
-    }
-    for (i = 0; i < req->nbindings; i++) {
-        if (asn_compare_oid(&req->bindings[i].var,
-            &resp->bindings[i].var) != 0) {
-                warnx("SNMP SET: wrong OID in response to SET");
-                return (-1);
-        }
-        if (resp->bindings[i].syntax != req->bindings[i].syntax) {
-            warnx("SNMP SET: bad syntax in response");
-            return (-1);
-        }
-    }
-    return (1);
-}
-
-/*
-* Simple checks for response PDUs against request PDUs. Return values: 1=ok,
-* 0=nosuchname or similar, -1=failure, -2=no response at all 
-*/
-int snmp_pdu_check(const struct snmp_pdu *req,
-    const struct snmp_pdu *resp)
-{
-    if (resp == NULL)
-        return (-2);
-
-    switch (req->type) {
-
-    case SNMP_PDU_GET:
-        return (ok_get(req, resp));
-
-    case SNMP_PDU_SET:
-        return (ok_set(req, resp));
-
-    case SNMP_PDU_GETNEXT:
-        return (ok_getnext(req, resp));
-
-    }
-    errx(1, "%s: bad pdu type %i", __func__, req->type);
-    return -1;
 }
 
 int snmp_dialog(struct snmp_client *client, struct snmp_v1_pdu *req, struct snmp_v1_pdu *resp)

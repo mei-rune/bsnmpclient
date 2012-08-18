@@ -254,7 +254,8 @@ enum snmp_code {
 	SNMP_CODE_BADBINDINGNUMBER,
 	SNMP_CODE_BADRESULT,
 	SNMP_CODE_BADOID,
-	
+
+	SNMP_CODE_SYNTAX_MISMATCH,
 	SNMP_CODE_SYNTAX_NOSUCHOBJECT,	/* exception */
 	SNMP_CODE_SYNTAX_NOSUCHINSTANCE,	/* exception */
 	SNMP_CODE_SYNTAX_ENDOFMIBVIEW,	/* exception */
@@ -319,7 +320,9 @@ enum snmp_code snmp_calc_keychange(struct snmp_user *, uint8_t *);
 extern void (*snmp_error)(const char *, ...);
 extern void (*snmp_printf)(const char *, ...);
 
-enum snmp_code snmp_validate_resp(struct snmp_pdu *resp, struct snmp_pdu *req);
+
+/* check wheater the answer is valid or not */
+enum snmp_code  snmp_pdu_check(const struct snmp_pdu *_req, const struct snmp_pdu *_resp);
 
 #define TRUTH_MK(F) ((F) ? 1 : 2)
 #define TRUTH_GET(T) (((T) == 1) ? 1 : 0)

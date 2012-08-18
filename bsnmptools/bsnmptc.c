@@ -29,7 +29,7 @@
  * Textual conventions for OctetStrings
  */
 
-#include "config.h"
+#include "bsnmp/config.h"
 
 #include <sys/queue.h>
 
@@ -52,9 +52,8 @@
 
 #include <bsnmp/asn1.h>
 #include <bsnmp/snmp.h>
-#include "bsnmp/tc.h"
-#include "bsnmp/tools.h"
-#include "support.h"
+#include "bsnmptc.h"
+#include "bsnmptools.h"
 
 /* OctetString, DisplayString */
 static uint8_t *snmp_oct2str(uint32_t, uint8_t *, uint8_t *);

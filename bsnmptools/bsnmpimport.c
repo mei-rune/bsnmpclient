@@ -88,10 +88,9 @@
 
 #include <bsnmp/asn1.h>
 #include <bsnmp/snmp.h>
-#include <bsnmp/snmpagent.h>	/* SNMP_INDEXES_MAX */
-#include "bsnmp/tc.h"
-#include "bsnmp/tools.h"
-#include "support.h"
+#include <bsnmp/agent.h>	/* SNMP_INDEXES_MAX */
+#include "bsnmptc.h"
+#include "bsnmptools.h"
 
 enum snmp_tbl_entry {
 	ENTRY_NONE = 0,

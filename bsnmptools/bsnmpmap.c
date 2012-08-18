@@ -43,12 +43,17 @@
 
 #include <bsnmp/asn1.h>
 #include <bsnmp/snmp.h>
-#include "bsnmp/tc.h"
-#include "bsnmp/tools.h"
-#include "support.h"
+#include "bsnmptc.h"
+#include "bsnmptools.h"
 
 extern int _bsnmptools_debug;
 #define	DEBUG	if (_bsnmptools_debug) fprintf
+
+#ifndef HAVE_STRLCPY
+
+size_t strlcpy(char *dst, const char *src, size_t len);
+
+#endif
 
 /* Allocate memory and initialize list. */
 struct snmp_mappings *
@@ -784,7 +789,7 @@ snmp_lookup_leafstring(struct snmp_toolinfo *snmptoolctx, struct snmp_object *s)
 		case SNMP_SYNTAX_ENDOFMIBVIEW:
 			return (snmp_lookup_allstring(snmptoolctx, s));
 		default:
-			warnx("Unknown syntax - %d", s->val.syntax);
+			snmp_error("Unknown syntax - %d", s->val.syntax);
 			break;
 	}
 

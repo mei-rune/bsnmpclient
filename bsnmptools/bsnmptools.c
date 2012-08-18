@@ -29,7 +29,7 @@
 * Helper functions for snmp client tools
 */
 
-#include "config.h"
+#include "bsnmp/config.h"
 
 #include <sys/queue.h>
 
@@ -50,10 +50,9 @@
 
 #include <bsnmp/asn1.h>
 #include <bsnmp/snmp.h>
-#include <bsnmp/snmpclient.h>
-#include "bsnmp/tc.h"
-#include "bsnmp/tools.h"
-#include "support.h"
+#include <bsnmp/client.h>
+#include "bsnmptc.h"
+#include "bsnmptools.h"
 
 /* Internal varibale to turn on library debugging for testing and to
 * find bugs. It is not exported via the header file.
@@ -1176,174 +1175,6 @@ struct snmp_value *err_value, int32_t error_status)
         }
 
         return (0);
-}
-
-
-void print_bad_oid(struct asn_oid* oid) {
-	static asn_subid_t      badOid[] =
-        { 1, 3, 6, 1, 6, 3, 15, 1, 1};
-
-	static asn_subid_t      unknownSecurityLevel[] =
-        { 1, 3, 6, 1, 6, 3, 15, 1, 1, 1, 0 };
-    static asn_subid_t      notInTimeWindow[] =
-        { 1, 3, 6, 1, 6, 3, 15, 1, 1, 2, 0 };
-    static asn_subid_t      unknownUserName[] =
-        { 1, 3, 6, 1, 6, 3, 15, 1, 1, 3, 0 };
-    static asn_subid_t      unknownEngineID[] =
-        { 1, 3, 6, 1, 6, 3, 15, 1, 1, 4, 0 };
-    static asn_subid_t      wrongDigest[] = 
-	    { 1, 3, 6, 1, 6, 3, 15, 1, 1, 5, 0 };
-    static asn_subid_t      decryptionError[] =
-        { 1, 3, 6, 1, 6, 3, 15, 1, 1, 6, 0 };
-
-	if(11 == oid->len && 0 == memcmp(badOid, oid->subs, sizeof(asn_subid_t) * 9)) {
-		switch(oid->subs[0]) {
-		case 1:
-			warnx("unknownSecurityLevel");
-			return;
-		case 2:
-			warnx("notInTimeWindow");
-			return;
-		case 3:
-			warnx("unknownUserName");
-			return;
-		case 4:
-			warnx("unknownEngineID");
-			return;
-		case 5:
-			warnx("wrongDigest");
-			return;
-		case 6:
-			warnx("decryptionError");
-			return;
-		}
-	}
-
-
-	
-    warnx("Bad OID in response");
-}
-/*
-* Check a PDU received in responce to a SNMP_PDU_GET/SNMP_PDU_GETBULK request
-* but don't compare syntaxes - when sending a request PDU they must be null.
-* This is a (almost) complete copy of snmp_pdu_check() - with matching syntaxes
-* checks and some other checks skiped.
-*/
-int32_t snmp_parse_get_resp(struct snmp_pdu *resp, struct snmp_pdu *req)
-{
-    uint32_t i;
-
-    for (i = 0; i < req->nbindings; i++) {
-        if (asn_compare_oid(&req->bindings[i].var,
-            &resp->bindings[i].var) != 0) {
-				print_bad_oid(&resp->bindings[i].var);
-                return (-1);
-        }
-
-
-        if (resp->version != SNMP_V1 && (resp->bindings[i].syntax
-            == SNMP_SYNTAX_NOSUCHOBJECT || resp->bindings[i].syntax ==
-            SNMP_SYNTAX_NOSUCHINSTANCE))
-            return (0);
-    }
-
-    return (1);
-}
-
-int32_t snmp_parse_getbulk_resp(struct snmp_pdu *resp, struct snmp_pdu *req)
-{
-    int32_t N, R, M, r;
-
-    if (req->error_status > (int32_t) resp->nbindings) {
-        warnx("Bad number of bindings in response");
-        return (-1);
-    }
-
-    for (N = 0; N < req->error_status; N++) {
-        if (asn_is_suboid(&req->bindings[N].var,
-            &resp->bindings[N].var) == 0)
-            return (0);
-        if (resp->bindings[N].syntax == SNMP_SYNTAX_ENDOFMIBVIEW)
-            return (0);
-    }
-
-    for (R = N , r = N; R  < (int32_t) req->nbindings; R++) {
-        for (M = 0; M < req->error_index && (r + M) <
-            (int32_t) resp->nbindings; M++) {
-                if (asn_is_suboid(&req->bindings[R].var,
-                    &resp->bindings[r + M].var) == 0)
-                    return (0);
-
-                if (resp->bindings[r + M].syntax ==
-                    SNMP_SYNTAX_ENDOFMIBVIEW) {
-                        M++;
-                        break;
-                }
-        }
-        r += M;
-    }
-
-    return (0);
-}
-
-int32_t snmp_parse_getnext_resp(struct snmp_pdu *resp, struct snmp_pdu *req)
-{
-    uint32_t i;
-
-    for (i = 0; i < req->nbindings; i++) {
-        if (asn_is_suboid(&req->bindings[i].var, &resp->bindings[i].var)
-            == 0)
-            return (0);
-
-        if (resp->version != SNMP_V1 && resp->bindings[i].syntax ==
-            SNMP_SYNTAX_ENDOFMIBVIEW)
-            return (0);
-    }
-
-    return (1);
-}
-
-/*
-* Should be called to check a responce to get/getnext/getbulk.
-*/
-int32_t snmp_parse_resp(struct snmp_pdu *resp, struct snmp_pdu *req)
-{
-    if (resp == NULL || req == NULL)
-        return (-2);
-
-    if (resp->version != req->version) {
-        warnx("Response has wrong version");
-        return (-1);
-    }
-
-    if (resp->error_status == SNMP_ERR_NOSUCHNAME) {
-        warnx("Error - No Such Name");
-        return (0);
-    }
-
-    if (resp->error_status != SNMP_ERR_NOERROR) {
-        warnx("Error %d in responce", resp->error_status);
-        return (-1);
-    }
-
-    if (resp->nbindings != req->nbindings && req->type != SNMP_PDU_GETBULK){
-        warnx("Bad number of bindings in response");
-        return (-1);
-    }
-
-    switch (req->type) {
-    case SNMP_PDU_GET:
-        return (snmp_parse_get_resp(resp,req));
-    case SNMP_PDU_GETBULK:
-        return (snmp_parse_getbulk_resp(resp,req));
-    case SNMP_PDU_GETNEXT:
-        return (snmp_parse_getnext_resp(resp,req));
-    default:
-        /* NOTREACHED */
-        break;
-    }
-
-    return (-2);
 }
 
 static void snmp_output_octetstring(struct snmp_toolinfo *snmptoolctx, enum snmp_tc tc,

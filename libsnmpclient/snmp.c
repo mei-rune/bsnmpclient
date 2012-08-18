@@ -36,7 +36,7 @@
 *
 * SNMP
 */
-#include "config.h"
+#include "bsnmp/config.h"
 #include <sys/types.h>
 #ifndef _WIN32
 #include <sys/socket.h>
@@ -93,6 +93,8 @@ static const struct {
 	{ "bad number of bindings ", SNMP_CODE_BADBINDINGNUMBER },
 	{ "bad result", SNMP_CODE_BADRESULT },
 	{ "bad oid", SNMP_CODE_BADOID },
+
+	{ "bad syntax", SNMP_CODE_SYNTAX_MISMATCH },
 	
 	{ "no such object", SNMP_CODE_SYNTAX_NOSUCHOBJECT },	/* exception */
 	{ "no such instance ", SNMP_CODE_SYNTAX_NOSUCHINSTANCE },	/* exception */
@@ -1487,7 +1489,7 @@ static void snmp_printf_func(const char *fmt, ...)
     va_end(ap);
 }
 
-static enum snmp_code snmp_parse_bad_oid(struct asn_oid* oid) {
+static enum snmp_code snmp_parse_bad_oid(const struct asn_oid* oid) {
 	static asn_subid_t      badOid[] =
         { 1, 3, 6, 1, 6, 3, 15, 1, 1};
 
@@ -1523,13 +1525,36 @@ static enum snmp_code snmp_parse_bad_oid(struct asn_oid* oid) {
 
 	return SNMP_CODE_BADOID;
 }
+
+
+/*
+* Check the response to a SET PDU. We check: - the error status must be 0 -
+* the number of bindings must be equal in response and request - the
+* syntaxes must be the same in response and request - the OIDs must be the
+* same in response and request
+*/
+static enum snmp_code snmp_check_set_resp(const struct snmp_pdu * req, const struct snmp_pdu * resp)
+{
+    uint32_t i;
+    for (i = 0; i < req->nbindings; i++) {
+        if (asn_compare_oid(&req->bindings[i].var,
+            &resp->bindings[i].var) != 0) {
+			return snmp_parse_bad_oid(&resp->bindings[i].var);
+        }
+        if (resp->bindings[i].syntax != req->bindings[i].syntax) {
+            return (SNMP_CODE_SYNTAX_MISMATCH);
+        }
+    }
+    return (SNMP_CODE_OK);
+}
+
 /*
 * Check a PDU received in responce to a SNMP_PDU_GET/SNMP_PDU_GETBULK request
 * but don't compare syntaxes - when sending a request PDU they must be null.
 * This is a (almost) complete copy of snmp_pdu_check() - with matching syntaxes
 * checks and some other checks skiped.
 */
-static enum snmp_code snmp_parse_get_resp(struct snmp_pdu *resp, struct snmp_pdu *req)
+static enum snmp_code snmp_check_get_resp(const struct snmp_pdu *resp, const struct snmp_pdu *req)
 {
     uint32_t i;
 
@@ -1550,7 +1575,7 @@ static enum snmp_code snmp_parse_get_resp(struct snmp_pdu *resp, struct snmp_pdu
     return (SNMP_CODE_OK);
 }
 
-static enum snmp_code snmp_parse_getbulk_resp(struct snmp_pdu *resp, struct snmp_pdu *req)
+static enum snmp_code snmp_check_getbulk_resp(const struct snmp_pdu *resp, const struct snmp_pdu *req)
 {
     int32_t N, R, M, r;
 	\
@@ -1581,7 +1606,8 @@ static enum snmp_code snmp_parse_getbulk_resp(struct snmp_pdu *resp, struct snmp
     return (SNMP_CODE_OK);
 }
 
-static enum snmp_code snmp_parse_getnext_resp(struct snmp_pdu *resp, struct snmp_pdu *req)
+
+static enum snmp_code snmp_check_getnext_resp(const struct snmp_pdu *resp, const struct snmp_pdu *req)
 {
     uint32_t i;
 
@@ -1600,7 +1626,7 @@ static enum snmp_code snmp_parse_getnext_resp(struct snmp_pdu *resp, struct snmp
 /*
 * Should be called to check a responce to get/getnext/getbulk.
 */
-enum snmp_code snmp_validate_resp(struct snmp_pdu *resp, struct snmp_pdu *req)
+enum snmp_code snmp_pdu_check(const struct snmp_pdu *resp, const struct snmp_pdu *req)
 {
 	enum snmp_code ret = SNMP_CODE_OK;
 
@@ -1626,13 +1652,16 @@ enum snmp_code snmp_validate_resp(struct snmp_pdu *resp, struct snmp_pdu *req)
 
     switch (req->type) {
     case SNMP_PDU_GET:
-        ret = (snmp_parse_get_resp(resp,req));
+        ret = (snmp_check_get_resp(resp,req));
 		break;
     case SNMP_PDU_GETBULK:
-        ret = (snmp_parse_getbulk_resp(resp,req));
+        ret = (snmp_check_getbulk_resp(resp,req));
 		break;
     case SNMP_PDU_GETNEXT:
-        ret = (snmp_parse_getnext_resp(resp,req));
+        ret = (snmp_check_getnext_resp(resp,req));
+		break;
+    case SNMP_PDU_SET:
+        ret = (snmp_check_set_resp(resp,req));
 		break;
     default:
         /* NOTREACHED */

@@ -30,7 +30,7 @@
  *
  * Functions that are missing on certain systems.
  */
-#include "config.h"
+#include "bsnmp/config.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>

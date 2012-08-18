@@ -34,34 +34,9 @@
 #ifndef bsnmp_support_h_
 #define bsnmp_support_h_
 
-#include "config.h"
+#include "bsnmp/config.h"
 #include <stdlib.h>
 
-#ifdef _WIN32
-
-#define socket_t    SOCKET
-#define ssize_t     int
-
-
-#define vsnprintf   _vsnprintf
-#define strtoll     _strtoi64
-#define strtoull    _strtoui64
-#define random      rand
-#define strncasecmp _strnicmp
-#define strcasecmp  _stricmp
-
-#define MAXPATHLEN  MAX_PATH
-
-#else
-
-#define socket_t    int
-#define closesocket close
-
-#ifndef MAXPATHLEN
-#define MAXPATHLEN 1024
-#endif
-
-#endif
 
 #ifndef HAVE_ERR_H
 

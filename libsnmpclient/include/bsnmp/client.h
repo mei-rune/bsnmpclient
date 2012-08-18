@@ -141,9 +141,6 @@ void snmp_pdu_create(struct snmp_client *client, struct snmp_pdu *, u_int _op);
 /* add pairs of (struct asn_oid *, enum snmp_syntax) to an existing pdu */
 int snmp_add_binding(struct snmp_pdu *, ...);
 
-/* check wheater the answer is valid or not */
-int snmp_pdu_check(const struct snmp_pdu *_req, const struct snmp_pdu *_resp);
-
 int32_t snmp_pdu_send(struct snmp_client *client, struct snmp_pdu *_pdu, snmp_send_cb_f _func, void *_arg);
 
 /*  append an index to an oid */
