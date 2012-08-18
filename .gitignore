@@ -1,0 +1,27 @@
+jit
+generated
+*.o
+*.*~
+options.gypi
+*.xcodeproj
+out/
+*.swp
+
+snmpget
+
+/out
+/default
+# various stuff that VC++ produces/uses
+Debug/
+Release/
+*.sln
+*.suo
+*.vcproj
+*.vcxproj
+*.vcxproj.user
+*.vcxproj.filters
+UpgradeLog*.XML
+_UpgradeReport_Files/
+ipch/
+*.sdf
+*.opensdf
