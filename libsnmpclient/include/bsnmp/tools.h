@@ -52,6 +52,8 @@
 #define	SNMP_DEFS_DIR		"/usr/share/snmp/defs/"
 #define	SNMP_DEFAULT_LOCAL	"/var/run/snmpd.sock"
 
+#define	SNMP_MAX_REPETITIONS	10
+
 enum snmp_access {
 	SNMP_ACCESS_NONE = 0,
 	SNMP_ACCESS_GET,
@@ -307,10 +309,6 @@ typedef int32_t (*snmp_add_vbind_f) (struct snmp_pdu *pdu,
 int32_t snmp_pdu_add_bindings(struct snmp_toolinfo *, snmp_verify_vbind_f vfunc, snmp_add_vbind_f afunc,
     struct snmp_pdu *pdu, int32_t);
 
-int32_t snmp_parse_get_resp(struct snmp_pdu *resp, struct snmp_pdu *req);
-int32_t snmp_parse_getbulk_resp(struct snmp_pdu *resp, struct snmp_pdu *req);
-int32_t snmp_parse_getnext_resp(struct snmp_pdu *resp, struct snmp_pdu *req);
-int32_t snmp_parse_resp(struct snmp_pdu *resp, struct snmp_pdu *req);
 int32_t snmp_output_numval(struct snmp_toolinfo *, struct snmp_value * val, struct snmp_oid2str *entry);
 void snmp_output_val(struct snmp_value *val);
 int32_t snmp_output_resp(struct snmp_toolinfo *, struct snmp_pdu *pdu);

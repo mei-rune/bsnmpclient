@@ -45,6 +45,7 @@
 #include <stdlib.h>
 #include <stddef.h>
 #include <stdarg.h>
+#include <assert.h>
 #ifdef HAVE_STDINT_H
 #include <stdint.h>
 #elif defined(HAVE_INTTYPES_H)
@@ -68,6 +69,60 @@ static void snmp_printf_func(const char *, ...);
 void (*snmp_error)(const char *, ...) = snmp_error_func;
 void (*snmp_printf)(const char *, ...) = snmp_printf_func;
 
+
+
+/*
+* An array of error strings corresponding to error definitions from libbsnmp.
+*/
+static const struct {
+    const char *str;
+    enum snmp_code code;
+} error_strings[] = {
+    { "ok", SNMP_CODE_OK },
+	{ "failed", SNMP_CODE_FAILED },
+	{ "bad version", SNMP_CODE_BADVERS },
+	{ "bad len", SNMP_CODE_BADLEN },
+	{ "bad encode", SNMP_CODE_BADENC },
+	{ "oorange", SNMP_CODE_OORANGE },
+	{ "bad security level", SNMP_CODE_BADSECLEVEL },
+	{ "not in time window", SNMP_CODE_NOTINTIME },
+	{ "bad user", SNMP_CODE_BADUSER },
+	{ "bad engine", SNMP_CODE_BADENGINE },
+	{ "bad digest", SNMP_CODE_BADDIGEST },
+	{ "error decrypt ", SNMP_CODE_EDECRYPT },
+	{ "bad number of bindings ", SNMP_CODE_BADBINDINGNUMBER },
+	{ "bad result", SNMP_CODE_BADRESULT },
+	{ "bad oid", SNMP_CODE_BADOID },
+	
+	{ "no such object", SNMP_CODE_SYNTAX_NOSUCHOBJECT },	/* exception */
+	{ "no such instance ", SNMP_CODE_SYNTAX_NOSUCHINSTANCE },	/* exception */
+	{ "end of mib view ", SNMP_CODE_SYNTAX_ENDOFMIBVIEW },	/* exception */
+    { "Too big ", SNMP_CODE_ERR_TOOBIG },
+    { "No such Name", SNMP_CODE_ERR_NOSUCHNAME },
+    { "Bad Value", SNMP_CODE_ERR_BADVALUE },
+    { "Readonly", SNMP_CODE_ERR_READONLY },
+    { "General error", SNMP_CODE_ERR_GENERR },
+    { "No access", SNMP_CODE_ERR_NO_ACCESS },
+    { "Wrong type", SNMP_CODE_ERR_WRONG_TYPE },
+    { "Wrong lenght", SNMP_CODE_ERR_WRONG_LENGTH },
+    { "Wrong encoding", SNMP_CODE_ERR_WRONG_ENCODING },
+    { "Wrong value", SNMP_CODE_ERR_WRONG_VALUE },
+    { "No creation", SNMP_CODE_ERR_NO_CREATION },
+    { "Inconsistent value", SNMP_CODE_ERR_INCONS_VALUE },
+    { "Resource unavailable", SNMP_CODE_ERR_RES_UNAVAIL },
+    { "Commit failed", SNMP_CODE_ERR_COMMIT_FAILED },
+    { "Undo failed", SNMP_CODE_ERR_UNDO_FAILED },
+    { "Authorization error", SNMP_CODE_ERR_AUTH_ERR },
+    { "Not writable", SNMP_CODE_ERR_NOT_WRITEABLE },
+    { "Inconsistent name", SNMP_CODE_ERR_INCONS_NAME },
+
+    { NULL, 0 }
+};
+
+const char* snmp_get_error(enum snmp_code code) {
+	assert(code == error_strings[code].code);
+	return error_strings[code].str;
+}
 /*
 * Get the next variable binding from the list.
 * ASN errors on the sequence or the OID are always fatal.
@@ -637,8 +692,7 @@ enum snmp_code snmp_pdu_decode_secmode(struct asn_buf *b, struct snmp_pdu *pdu)
         (pdu->flags & SNMP_MSG_AUTH_FLAG) == 0)
         return (SNMP_CODE_BADSECLEVEL);
 
-    if ((code = snmp_pdu_calc_digest(pdu, digest)) !=
-        SNMP_CODE_OK)
+    if ((code = snmp_pdu_calc_digest(pdu, digest)) != SNMP_CODE_OK)
         return (SNMP_CODE_FAILED);
 
     if (pdu->user.auth_proto != SNMP_AUTH_NOAUTH &&
@@ -1431,4 +1485,162 @@ static void snmp_printf_func(const char *fmt, ...)
     va_start(ap, fmt);
     vfprintf(stderr, fmt, ap);
     va_end(ap);
+}
+
+static enum snmp_code snmp_parse_bad_oid(struct asn_oid* oid) {
+	static asn_subid_t      badOid[] =
+        { 1, 3, 6, 1, 6, 3, 15, 1, 1};
+
+	static asn_subid_t      unknownSecurityLevel[] =
+        { 1, 3, 6, 1, 6, 3, 15, 1, 1, 1, 0 };
+    static asn_subid_t      notInTimeWindow[] =
+        { 1, 3, 6, 1, 6, 3, 15, 1, 1, 2, 0 };
+    static asn_subid_t      unknownUserName[] =
+        { 1, 3, 6, 1, 6, 3, 15, 1, 1, 3, 0 };
+    static asn_subid_t      unknownEngineID[] =
+        { 1, 3, 6, 1, 6, 3, 15, 1, 1, 4, 0 };
+    static asn_subid_t      wrongDigest[] = 
+	    { 1, 3, 6, 1, 6, 3, 15, 1, 1, 5, 0 };
+    static asn_subid_t      decryptionError[] =
+        { 1, 3, 6, 1, 6, 3, 15, 1, 1, 6, 0 };
+
+	if(11 == oid->len && 0 == memcmp(badOid, oid->subs, sizeof(asn_subid_t) * 9)) {
+		switch(oid->subs[0]) {
+		case 1:
+			return SNMP_CODE_BADSECLEVEL;
+		case 2:
+			return SNMP_CODE_NOTINTIME;
+		case 3:
+			return SNMP_CODE_BADUSER;
+		case 4:
+			return SNMP_CODE_BADENGINE;
+		case 5:
+			return SNMP_CODE_BADDIGEST;
+		case 6:
+			return SNMP_CODE_EDECRYPT;
+		}
+	}
+
+	return SNMP_CODE_BADOID;
+}
+/*
+* Check a PDU received in responce to a SNMP_PDU_GET/SNMP_PDU_GETBULK request
+* but don't compare syntaxes - when sending a request PDU they must be null.
+* This is a (almost) complete copy of snmp_pdu_check() - with matching syntaxes
+* checks and some other checks skiped.
+*/
+static enum snmp_code snmp_parse_get_resp(struct snmp_pdu *resp, struct snmp_pdu *req)
+{
+    uint32_t i;
+
+    for (i = 0; i < req->nbindings; i++) {
+        if (asn_compare_oid(&req->bindings[i].var,
+            &resp->bindings[i].var) != 0) {
+			return snmp_parse_bad_oid(&resp->bindings[i].var);
+        }
+
+        if (resp->version != SNMP_V1) {
+			if (resp->bindings[i].syntax == SNMP_SYNTAX_NOSUCHOBJECT)
+				return (SNMP_CODE_SYNTAX_NOSUCHOBJECT);
+			if ( resp->bindings[i].syntax == SNMP_SYNTAX_NOSUCHINSTANCE)
+				return (SNMP_CODE_SYNTAX_NOSUCHINSTANCE);
+		}
+    }
+	
+    return (SNMP_CODE_OK);
+}
+
+static enum snmp_code snmp_parse_getbulk_resp(struct snmp_pdu *resp, struct snmp_pdu *req)
+{
+    int32_t N, R, M, r;
+	\
+    for (N = 0; N < req->error_status; N++) {
+        if (asn_is_suboid(&req->bindings[N].var,
+            &resp->bindings[N].var) == 0)
+            return (SNMP_CODE_BADRESULT);
+        if (resp->bindings[N].syntax == SNMP_SYNTAX_ENDOFMIBVIEW)
+            return (SNMP_CODE_SYNTAX_ENDOFMIBVIEW);
+    }
+
+    for (R = N , r = N; R  < (int32_t) req->nbindings; R++) {
+        for (M = 0; M < req->error_index && (r + M) <
+            (int32_t) resp->nbindings; M++) {
+                if (asn_is_suboid(&req->bindings[R].var,
+                    &resp->bindings[r + M].var) == 0)
+					return (SNMP_CODE_BADOID);
+
+                if (resp->bindings[r + M].syntax ==
+                    SNMP_SYNTAX_ENDOFMIBVIEW) {
+                        M++;
+                        break;
+                }
+        }
+        r += M;
+    }
+	
+    return (SNMP_CODE_OK);
+}
+
+static enum snmp_code snmp_parse_getnext_resp(struct snmp_pdu *resp, struct snmp_pdu *req)
+{
+    uint32_t i;
+
+    for (i = 0; i < req->nbindings; i++) {
+        if (asn_is_suboid(&req->bindings[i].var, &resp->bindings[i].var) == 0)
+            return (SNMP_CODE_BADOID);
+
+        if (resp->version != SNMP_V1 && resp->bindings[i].syntax ==
+            SNMP_SYNTAX_ENDOFMIBVIEW)
+            return (SNMP_CODE_SYNTAX_ENDOFMIBVIEW);
+    }
+	
+    return (SNMP_CODE_OK);
+}
+
+/*
+* Should be called to check a responce to get/getnext/getbulk.
+*/
+enum snmp_code snmp_validate_resp(struct snmp_pdu *resp, struct snmp_pdu *req)
+{
+	enum snmp_code ret = SNMP_CODE_OK;
+
+    if (resp == NULL || req == NULL) {
+		snmp_error(snmp_get_error(SNMP_CODE_FAILED));
+        return (SNMP_CODE_FAILED);
+	}
+
+    if (resp->version != req->version) {
+		snmp_error(snmp_get_error(SNMP_CODE_BADVERS));
+        return (SNMP_CODE_BADVERS);
+    }
+
+    if (resp->error_status != SNMP_ERR_NOERROR) {
+        snmp_error(snmp_get_error((enum snmp_code)(SNMP_CODE_ERR_NOERROR + resp->error_status)));
+        return (enum snmp_code)(SNMP_CODE_ERR_NOERROR + resp->error_status);
+    }
+
+    if (resp->nbindings != req->nbindings && req->type != SNMP_PDU_GETBULK){
+		snmp_error(snmp_get_error(SNMP_CODE_BADBINDINGNUMBER));
+        return (SNMP_CODE_BADBINDINGNUMBER);
+    }
+
+    switch (req->type) {
+    case SNMP_PDU_GET:
+        ret = (snmp_parse_get_resp(resp,req));
+		break;
+    case SNMP_PDU_GETBULK:
+        ret = (snmp_parse_getbulk_resp(resp,req));
+		break;
+    case SNMP_PDU_GETNEXT:
+        ret = (snmp_parse_getnext_resp(resp,req));
+		break;
+    default:
+        /* NOTREACHED */
+        break;
+    }
+	if(SNMP_CODE_OK != ret) {
+		snmp_error(snmp_get_error(ret));
+	}
+
+    return (ret);
 }

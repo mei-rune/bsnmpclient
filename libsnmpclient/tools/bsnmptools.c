@@ -131,6 +131,7 @@ void snmptool_init(struct snmp_toolinfo *snmptoolctx)
     snmptoolctx->flags = SNMP_PDU_GET;	/* XXX */
     SLIST_INIT(&snmptoolctx->filelist);
     snmp_client_init(&snmptoolctx->client);
+	//SET_MAXREP(snmptoolctx, SNMP_MAX_REPETITIONS);
 
     if (add_filename(snmptoolctx, bsnmpd_defs, &IsoOrgDod_OID, 0) < 0)
         warnx("Error adding file %s to list", bsnmpd_defs);
@@ -556,6 +557,12 @@ int32_t parse_version(struct snmp_client* client, char *opt_arg)
         break;
     case 2:
         client->version = SNMP_V2c;
+        break;
+    case 3:
+        client->version = SNMP_V3;
+        client->security_model = SNMP_SECMODEL_USM;
+	    client->user.auth_proto = SNMP_AUTH_NOAUTH;
+	    client->user.priv_proto = SNMP_PRIV_NOPRIV;
         break;
     default:
         warnx("Unsupported SNMP version - %u", v);
@@ -1171,23 +1178,68 @@ struct snmp_value *err_value, int32_t error_status)
         return (0);
 }
 
+
+void print_bad_oid(struct asn_oid* oid) {
+	static asn_subid_t      badOid[] =
+        { 1, 3, 6, 1, 6, 3, 15, 1, 1};
+
+	static asn_subid_t      unknownSecurityLevel[] =
+        { 1, 3, 6, 1, 6, 3, 15, 1, 1, 1, 0 };
+    static asn_subid_t      notInTimeWindow[] =
+        { 1, 3, 6, 1, 6, 3, 15, 1, 1, 2, 0 };
+    static asn_subid_t      unknownUserName[] =
+        { 1, 3, 6, 1, 6, 3, 15, 1, 1, 3, 0 };
+    static asn_subid_t      unknownEngineID[] =
+        { 1, 3, 6, 1, 6, 3, 15, 1, 1, 4, 0 };
+    static asn_subid_t      wrongDigest[] = 
+	    { 1, 3, 6, 1, 6, 3, 15, 1, 1, 5, 0 };
+    static asn_subid_t      decryptionError[] =
+        { 1, 3, 6, 1, 6, 3, 15, 1, 1, 6, 0 };
+
+	if(11 == oid->len && 0 == memcmp(badOid, oid->subs, sizeof(asn_subid_t) * 9)) {
+		switch(oid->subs[0]) {
+		case 1:
+			warnx("unknownSecurityLevel");
+			return;
+		case 2:
+			warnx("notInTimeWindow");
+			return;
+		case 3:
+			warnx("unknownUserName");
+			return;
+		case 4:
+			warnx("unknownEngineID");
+			return;
+		case 5:
+			warnx("wrongDigest");
+			return;
+		case 6:
+			warnx("decryptionError");
+			return;
+		}
+	}
+
+
+	
+    warnx("Bad OID in response");
+}
 /*
 * Check a PDU received in responce to a SNMP_PDU_GET/SNMP_PDU_GETBULK request
 * but don't compare syntaxes - when sending a request PDU they must be null.
 * This is a (almost) complete copy of snmp_pdu_check() - with matching syntaxes
 * checks and some other checks skiped.
 */
-int32_t
-    snmp_parse_get_resp(struct snmp_pdu *resp, struct snmp_pdu *req)
+int32_t snmp_parse_get_resp(struct snmp_pdu *resp, struct snmp_pdu *req)
 {
     uint32_t i;
 
     for (i = 0; i < req->nbindings; i++) {
         if (asn_compare_oid(&req->bindings[i].var,
             &resp->bindings[i].var) != 0) {
-                warnx("Bad OID in response");
+				print_bad_oid(&resp->bindings[i].var);
                 return (-1);
         }
+
 
         if (resp->version != SNMP_V1 && (resp->bindings[i].syntax
             == SNMP_SYNTAX_NOSUCHOBJECT || resp->bindings[i].syntax ==
@@ -1198,8 +1250,7 @@ int32_t
     return (1);
 }
 
-int32_t
-    snmp_parse_getbulk_resp(struct snmp_pdu *resp, struct snmp_pdu *req)
+int32_t snmp_parse_getbulk_resp(struct snmp_pdu *resp, struct snmp_pdu *req)
 {
     int32_t N, R, M, r;
 
@@ -1235,8 +1286,7 @@ int32_t
     return (0);
 }
 
-int32_t
-    snmp_parse_getnext_resp(struct snmp_pdu *resp, struct snmp_pdu *req)
+int32_t snmp_parse_getnext_resp(struct snmp_pdu *resp, struct snmp_pdu *req)
 {
     uint32_t i;
 
@@ -1256,8 +1306,7 @@ int32_t
 /*
 * Should be called to check a responce to get/getnext/getbulk.
 */
-int32_t
-    snmp_parse_resp(struct snmp_pdu *resp, struct snmp_pdu *req)
+int32_t snmp_parse_resp(struct snmp_pdu *resp, struct snmp_pdu *req)
 {
     if (resp == NULL || req == NULL)
         return (-2);
@@ -1656,13 +1705,15 @@ void snmp_output_err_resp(struct snmp_toolinfo *snmptoolctx, struct snmp_pdu *pd
     fprintf(stdout, "Agent %s:%s returned error \n", snmptoolctx->client.chost,
         snmptoolctx->client.cport);
 
-    if (!ISSET_NUMERIC(snmptoolctx) && (snmp_fill_object(snmptoolctx, &object,
-        &(pdu->bindings[pdu->error_index - 1])) > 0))
-        snmp_output_object(snmptoolctx, &object);
-    else {
-        asn_oid2str_r(&(pdu->bindings[pdu->error_index - 1].var), buf);
-        fprintf(stdout,"%s", buf);
-    }
+	if(pdu->error_index > 0) {
+		if (!ISSET_NUMERIC(snmptoolctx) && (snmp_fill_object(snmptoolctx, &object,
+			&(pdu->bindings[pdu->error_index - 1])) > 0))
+			snmp_output_object(snmptoolctx, &object);
+		else {
+			asn_oid2str_r(&(pdu->bindings[pdu->error_index - 1].var), buf);
+			fprintf(stdout,"%s", buf);
+		}
+	}
 
     fprintf(stdout," caused error - ");
     if ((pdu->error_status > 0) && (pdu->error_status <=

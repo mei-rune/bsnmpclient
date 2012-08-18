@@ -103,8 +103,20 @@ static enum program_e {
 /* *****************************************************************************
  * Common bsnmptools functions.
  */
-static void
-usage()
+
+static void usage_help()
+{
+	fprintf(stderr,"A snmp tools\n"
+  "Usage:\n"
+  "  %s -h/--help\n"
+  "  %s -v/--version\n"
+  "  %s command [options...]\n"
+  "Examples:\n"
+  "  %s get -v 2 -s udp::public@127.0.0.1:161 1.3.6.1.2.1.1.2.0\n"
+  , program_name, program_name, program_name, program_name);
+}
+
+static void usage(int program)
 {
 	fprintf(stderr,
 "Usage:\n"
@@ -138,12 +150,12 @@ usage()
 "    server    SNMP agent name or IP address, default: localhost\n"
 "    port      Agent port, default: snmp=161\n"
 " -t timeout  Number of seconds before resending a request packet, default: 3\n"
-" -v version  SNMP version to use: [1|2], default: 2\n"
+" -v version  SNMP version to use: [1|2|3], default: 2\n"
 "%s",
 	program_name,
-	(program == BSNMPGET) ? "[-adehn]" :
-	    (program == BSNMPWALK) ? "[-dhn]" :
-	    (program == BSNMPSET) ? "[-adehn]" :
+	(program == BSNMPGET) ? "get [-adehn]" :
+	    (program == BSNMPWALK) ? "walk [-dhn]" :
+	    (program == BSNMPSET) ? "set [-adehn]" :
 	    "",
 	(program == BSNMPGET) ? " [-M max-repetitions] [-N non-repeaters]" : "",
 	(program == BSNMPGET) ? "[-p pdu] " : "",
@@ -267,7 +279,7 @@ snmptool_parse_options(struct snmp_toolinfo *snmptoolctx, int argc, char **argv)
 				return (-1);
 			break;
 		case 'h':
-			usage();
+			usage(program);
 			return (-2);
 		case 'I':
 			if ((count = parse_include(snmptoolctx, optarg)) < 0)
@@ -319,7 +331,7 @@ snmptool_parse_options(struct snmp_toolinfo *snmptoolctx, int argc, char **argv)
 			break;
 		case '?':
 		default:
-			usage();
+			usage(program);
 			return (-1);
 	    }
 	    optnum += count;
@@ -426,14 +438,6 @@ snmpget_verify_vbind(struct snmp_toolinfo *snmptoolctx, struct snmp_pdu *pdu,
 		return (-1);
 	}
 
-	if (ISSET_NUMERIC(snmptoolctx) || pdu->type == SNMP_PDU_GETNEXT ||
-	    pdu->type == SNMP_PDU_GETBULK)
-		return (1);
-
-	if (pdu->type == SNMP_PDU_GET && obj->val.syntax == SNMP_SYNTAX_NULL) {
-		warnx("Only leaf object values can be added to GET PDU");
-		return (-1);
-	}
 
 	return (1);
 }
@@ -480,7 +484,7 @@ snmptool_get(struct snmp_toolinfo *snmptoolctx)
 			break;
 		}
 
-		if (snmp_parse_resp(&resp, &req) >= 0) {
+		if (snmp_validate_resp(&resp, &req) == SNMP_CODE_OK) {
 			snmp_output_resp(snmptoolctx, &resp);
 			break;
 		}
@@ -555,7 +559,18 @@ snmptool_walk(struct snmp_toolinfo *snmptoolctx)
 
 		outputs = 0;
 		while (snmp_dialog(&snmptoolctx->client, &req, &resp) >= 0) {
-			if ((snmp_parse_resp(&resp, &req)) < 0) {
+			int continue_ok = 1;
+			switch(snmp_validate_resp(&resp, &req))
+			{
+			case SNMP_CODE_OK:
+				continue_ok = 1;
+				break;
+			default:
+				continue_ok = 0;
+				break;
+			}
+
+			if(continue_ok == 0) {
 				snmp_output_err_resp(snmptoolctx, &resp);
 				snmp_pdu_free(&resp);
 				outputs = -1;
@@ -583,7 +598,7 @@ snmptool_walk(struct snmp_toolinfo *snmptoolctx)
 		if (outputs == 0) {
 			snmpwalk_nextpdu_create(&snmptoolctx->client, SNMP_PDU_GET, &root, &req);
 			if (snmp_dialog(&snmptoolctx->client, &req, &resp) == SNMP_CODE_OK) {
-				if (snmp_parse_resp(&resp,&req) < 0)
+				if (snmp_validate_resp(&resp, &req) == SNMP_CODE_OK)
 					snmp_output_err_resp(snmptoolctx, &resp);
 				else
 					snmp_output_resp(snmptoolctx, &(resp));
@@ -1211,7 +1226,7 @@ main(int argc, char ** argv)
 
 	/* Make sure program_name is set and valid. */
 	if (*argv == NULL)
-		program_name = "snmptool";
+		program_name = "snmptools";
 	else {
 		program_name = strrchr(*argv, '/');
 		if (program_name != NULL)
@@ -1233,7 +1248,8 @@ main(int argc, char ** argv)
 		program = BSNMPSET;
 	else {
         if(argc < 2){
-		    fprintf(stderr, "Unknown snmp tool name '%s'.\n", program_name);
+		    fprintf(stderr, "Unknown command '%s'.\n", program_name);
+			usage_help();
 		    exit (1);
         }
 
@@ -1243,8 +1259,14 @@ main(int argc, char ** argv)
 		    program = BSNMPWALK;
         } else if (strcmp(argv[1], "set") == 0) {
 		    program = BSNMPSET;
+        } else if (strcasecmp(argv[1], "help") == 0 
+			|| strcasecmp(argv[1], "--help") == 0
+			|| strcasecmp(argv[1], "-h") == 0) {
+			usage_help();
+		    exit (1);
         } else {
 		    fprintf(stderr, "Unknown command '%s'.\n", program_name);
+			usage_help();
 		    exit (1);
         }
         offset = 1;
@@ -1267,7 +1289,7 @@ main(int argc, char ** argv)
 		switch (program) {
 		case BSNMPGET:
 			fprintf(stderr, "No OID given.\n");
-			usage();
+			usage(program);
 			snmp_tool_freeall(&snmptoolctx);
 			exit(1);
 		case BSNMPWALK:
@@ -1281,7 +1303,7 @@ main(int argc, char ** argv)
 			break;
 		case BSNMPSET:
 			fprintf(stderr, "No OID given.\n");
-			usage();
+			usage(program);
 			snmp_tool_freeall(&snmptoolctx);
 			exit(1);
 		}

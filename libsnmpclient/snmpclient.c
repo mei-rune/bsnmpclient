@@ -1710,8 +1710,7 @@ int snmp_dialog(struct snmp_client *client, struct snmp_v1_pdu *req, struct snmp
     return (-1);
 }
 
-int
-    snmp_discover_engine(struct snmp_client *client, char *passwd)
+int snmp_discover_engine(struct snmp_client *client, char *passwd)
 {
     char cname[SNMP_ADM_STR32_SIZ];
     enum snmp_authentication cap;
@@ -1761,8 +1760,8 @@ int
         return (0);
 
     if (passwd == NULL ||
-        snmp_passwd_to_keys(&client->user, passwd) != SNMP_CODE_OK ||
-        snmp_get_local_keys(&client->user, client->engine.engine_id,
+        snmp_set_auth_passphrase(&client->user, passwd, strlen(passwd)) != SNMP_CODE_OK ||
+        snmp_auth_to_localization_keys(&client->user, client->engine.engine_id,
         client->engine.engine_len) != SNMP_CODE_OK)
         return (-1);
 

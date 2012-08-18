@@ -141,11 +141,13 @@ struct snmp_engine {
 };
 
 struct snmp_user {
-	char				sec_name[SNMP_ADM_STR32_SIZ];
 	enum snmp_authentication	auth_proto;
 	enum snmp_privacy		priv_proto;
 	uint8_t				auth_key[SNMP_AUTH_KEY_SIZ];
+	size_t              auth_len;
 	uint8_t				priv_key[SNMP_PRIV_KEY_SIZ];
+	size_t              priv_len;
+	char				sec_name[SNMP_ADM_STR32_SIZ];
 };
 
 struct snmp_pdu {
@@ -248,8 +250,37 @@ enum snmp_code {
 	SNMP_CODE_BADUSER,
 	SNMP_CODE_BADENGINE,
 	SNMP_CODE_BADDIGEST,
-	SNMP_CODE_EDECRYPT
+	SNMP_CODE_EDECRYPT,
+	SNMP_CODE_BADBINDINGNUMBER,
+	SNMP_CODE_BADRESULT,
+	SNMP_CODE_BADOID,
+	
+	SNMP_CODE_SYNTAX_NOSUCHOBJECT,	/* exception */
+	SNMP_CODE_SYNTAX_NOSUCHINSTANCE,	/* exception */
+	SNMP_CODE_SYNTAX_ENDOFMIBVIEW,	/* exception */
+
+	SNMP_CODE_ERR_TOOBIG,
+	SNMP_CODE_ERR_NOSUCHNAME,
+	SNMP_CODE_ERR_BADVALUE,
+	SNMP_CODE_ERR_READONLY,
+	SNMP_CODE_ERR_GENERR,
+	SNMP_CODE_ERR_NO_ACCESS,
+	SNMP_CODE_ERR_WRONG_TYPE,
+	SNMP_CODE_ERR_WRONG_LENGTH,
+	SNMP_CODE_ERR_WRONG_ENCODING,
+	SNMP_CODE_ERR_WRONG_VALUE,
+	SNMP_CODE_ERR_NO_CREATION,
+	SNMP_CODE_ERR_INCONS_VALUE,
+	SNMP_CODE_ERR_RES_UNAVAIL,
+	SNMP_CODE_ERR_COMMIT_FAILED,
+	SNMP_CODE_ERR_UNDO_FAILED,
+	SNMP_CODE_ERR_AUTH_ERR,
+	SNMP_CODE_ERR_NOT_WRITEABLE,
+	SNMP_CODE_ERR_INCONS_NAME
 };
+
+
+#define SNMP_CODE_ERR_NOERROR	(SNMP_CODE_ERR_TOOBIG-1)
 
 #define	SNMP_MSG_AUTH_FLAG		0x1
 #define	SNMP_MSG_PRIV_FLAG		0x2
@@ -272,12 +303,23 @@ int snmp_pdu_snoop(const struct asn_buf *);
 
 void snmp_pdu_dump(const struct snmp_pdu *pdu);
 
-enum snmp_code snmp_passwd_to_keys(struct snmp_user *, char *);
-enum snmp_code snmp_get_local_keys(struct snmp_user *, uint8_t *, uint32_t);
+enum snmp_code snmp_set_auth_passphrase(struct snmp_user *user
+	                            , const char *passphrase, size_t passphrase_len);
+enum snmp_code snmp_set_priv_passphrase(struct snmp_user *user
+	                            , const char *passphrase, size_t passphrase_len);
+enum snmp_code snmp_auth_to_localization_keys(struct snmp_user *user
+	                            , const uint8_t *eid, uint32_t elen);
+enum snmp_code snmp_priv_to_localization_keys(struct snmp_user *user
+	                            , const uint8_t *eid, uint32_t elen);
+
+//enum snmp_code snmp_passwd_to_keys(struct snmp_user *, char *);
+//enum snmp_code snmp_get_local_keys(struct snmp_user *, uint8_t *, uint32_t);
 enum snmp_code snmp_calc_keychange(struct snmp_user *, uint8_t *);
 
 extern void (*snmp_error)(const char *, ...);
 extern void (*snmp_printf)(const char *, ...);
+
+enum snmp_code snmp_validate_resp(struct snmp_pdu *resp, struct snmp_pdu *req);
 
 #define TRUTH_MK(F) ((F) ? 1 : 2)
 #define TRUTH_GET(T) (((T) == 1) ? 1 : 0)
