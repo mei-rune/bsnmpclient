@@ -57,20 +57,21 @@
 #define	SNMP_TRANS_LOC_DGRAM	1
 #define	SNMP_TRANS_LOC_STREAM	2
 
+struct snmp_client;
+
 /* type of callback function for responses
  * this callback function is responsible for free() any memory associated with
  * any of the PDUs. Therefor it may call snmp_pdu_free() */
-typedef void (*snmp_send_cb_f)(struct snmp_client *client, struct snmp_pdu *, struct snmp_pdu *, void *);
+typedef void (*snmp_send_cb_f)(struct snmp_client *, snmp_pdu_t *, snmp_pdu_t *, void *);
 
 /* type of callback function for timeouts */
-typedef void (*snmp_timeout_cb_f)(struct snmp_client *client, void * );
+typedef void (*snmp_timeout_cb_f)(struct snmp_client *, void * );
 
 /* timeout start function */
-typedef void *(*snmp_timeout_start_f)(struct timeval *timeout,  
-    snmp_timeout_cb_f callback, void *);
+typedef void *(*snmp_timeout_start_f)(struct timeval *timeout, snmp_timeout_cb_f, void *);
 
 /* timeout stop function */
-typedef void (*snmp_timeout_stop_f)(void *timeout_id);
+typedef void (*snmp_timeout_stop_f)(void *);
 
 /*
  * Client context.
@@ -89,8 +90,8 @@ struct snmp_client {
 	/* SNMPv3 specific fields */
 	int32_t			identifier;
 	int32_t			security_model;
-	struct snmp_engine	engine;
-	struct snmp_user	user;
+	snmp_engine_t	engine;
+	snmp_user_t	user;
 
 	/* SNMPv3 Access control - VACM*/
 	uint32_t		clen;
@@ -136,15 +137,15 @@ int snmp_open(struct snmp_client *client, const char *_hostname,
 void snmp_close(struct snmp_client *client);
 
 /* initialize a snmp_pdu structure */
-void snmp_pdu_create(struct snmp_client *client, struct snmp_pdu *, u_int _op);
+void snmp_pdu_create(struct snmp_client *client, snmp_pdu_t *, u_int _op);
 
-/* add pairs of (struct asn_oid *, enum snmp_syntax) to an existing pdu */
-int snmp_add_binding(struct snmp_pdu *, ...);
+/* add pairs of (asn_oid_t *, enum snmp_syntax) to an existing pdu */
+int snmp_add_binding(snmp_pdu_t *, ...);
 
-int32_t snmp_pdu_send(struct snmp_client *client, struct snmp_pdu *_pdu, snmp_send_cb_f _func, void *_arg);
+int32_t snmp_pdu_send(struct snmp_client *client, snmp_pdu_t *_pdu, snmp_send_cb_f _func, void *_arg);
 
 /*  append an index to an oid */
-int snmp_oid_append(struct asn_oid *_oid, const char *_fmt, ...);
+int snmp_oid_append(asn_oid_t *_oid, const char *_fmt, ...);
 
 /* receive a packet */
 int snmp_receive(struct snmp_client *client, int _blocking);
@@ -156,9 +157,9 @@ int snmp_receive(struct snmp_client *client, int _blocking);
  */
 struct snmp_table {
 	/* base OID of the table */
-	struct asn_oid		table;
+	asn_oid_t		table;
 	/* type OID of the LastChange variable for the table if any */
-	struct asn_oid		last_change;
+	asn_oid_t		last_change;
 	/* maximum number of iterations if table has changed */
 	u_int			max_iter;
 	/* size of the C-structure */
@@ -193,10 +194,10 @@ int snmp_table_fetch_async(struct snmp_client* client, const struct snmp_table *
     snmp_table_cb_f, void *);
 
 /* send a request and wait for the response */
-int snmp_dialog(struct snmp_client *client, struct snmp_pdu *_req, struct snmp_pdu *_resp);
+int snmp_dialog(struct snmp_client *client, snmp_pdu_t *_req, snmp_pdu_t *_resp);
 
 /* discover an authorative snmpEngineId */
-int snmp_discover_engine(struct snmp_client *client, char *);
+int snmp_discover_engine(struct snmp_client *client, char *, char *, char *);
 
 /* parse a server specification */
 int snmp_parse_server(struct snmp_client *, const char *);

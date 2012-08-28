@@ -32,7 +32,11 @@
 #define	_BSNMP_TOOLS_H_
 
 #include <stdint.h>
+#ifdef _WIN32
+#include <compat/sys/queue.h>
+#else
 #include <sys/queue.h>
+#endif
 #include "bsnmp/client.h"
 
 #ifndef _WIN32
@@ -53,6 +57,24 @@
 #define	SNMP_DEFAULT_LOCAL	"/var/run/snmpd.sock"
 
 #define	SNMP_MAX_REPETITIONS	10
+
+
+#ifndef HAVE_STRLCPY
+
+size_t strlcpy(char *dst, const char *src, size_t len);
+
+#endif
+
+#ifdef HAVE_ERR_H
+#include <err.h>
+#else
+
+void warnx(const char *fmt, ...);
+void warn(const char *fmt, ...);
+void errx(int code, const char *fmt, ...);
+void err(int code, const char *fmt, ...);
+
+#endif
 
 enum snmp_access {
 	SNMP_ACCESS_NONE = 0,
@@ -93,7 +115,7 @@ STAILQ_HEAD(snmp_idxlist, index);
 struct snmp_index_entry {
 	char			*string;
 	uint32_t		strlen;
-	struct asn_oid		var;
+	asn_oid_t		var;
 	struct snmp_idxlist	index_list;
 	COMPAT_SLIST_ENTRY(snmp_index_entry)	link;
 };
@@ -105,7 +127,7 @@ struct snmp_oid2str {
 	enum snmp_tc		tc;
 	enum snmp_syntax	syntax;
 	enum snmp_access	access;
-	struct asn_oid		var;
+	asn_oid_t		var;
 	/* A pointer to a entry from the table list - OK if NULL. */
 	struct snmp_index_entry	*table_idx;
 	/*
@@ -126,14 +148,14 @@ struct snmp_object {
 	 */
 	struct snmp_oid2str	*info;
 	/* A snmp value to hold the actual oid, syntax and value. */
-	struct snmp_value	val;
+	snmp_value_t	val;
 	COMPAT_SLIST_ENTRY(snmp_object)	link;
 };
 
 struct fname {
 	char		*name;
 	int32_t		done;
-	struct asn_oid	cut;
+	asn_oid_t	cut;
 	COMPAT_SLIST_ENTRY(fname)	link;
 };
 
@@ -229,12 +251,12 @@ extern struct snmp_toolinfo snmptool;
 #define	GET_NONREP(ctx)		(((ctx)->flags & NONREP_BITS) >> 24)
 
 
-extern const struct asn_oid IsoOrgDod_OID;
+extern const asn_oid_t IsoOrgDod_OID;
 
 void snmptool_init(struct snmp_toolinfo *toolinfo);
 int32_t snmp_import_file(struct snmp_toolinfo *, struct fname *file); /* bsnmpimport.c */
 int32_t snmp_import_all(struct snmp_toolinfo *);
-int32_t add_filename(struct snmp_toolinfo *, const char *filename, const struct asn_oid *cut,
+int32_t add_filename(struct snmp_toolinfo *, const char *filename, const asn_oid_t *cut,
     int32_t done);
 void free_filelist(struct snmp_toolinfo *);
 void snmp_tool_freeall(struct snmp_toolinfo *);
@@ -292,26 +314,26 @@ int32_t parse_skip_access(struct snmp_toolinfo *);
 
 typedef int32_t (*snmp_verify_inoid_f) (struct snmp_toolinfo *, struct snmp_object *obj, char *string);
 int32_t snmp_object_add(struct snmp_toolinfo *, snmp_verify_inoid_f func, char *string);
-int32_t snmp_object_remove(struct snmp_toolinfo *, struct asn_oid *oid);
-int32_t snmp_object_seterror(struct snmp_toolinfo *, struct snmp_value *err_val, int32_t err_status);
+int32_t snmp_object_remove(struct snmp_toolinfo *, asn_oid_t *oid);
+int32_t snmp_object_seterror(struct snmp_toolinfo *, snmp_value_t *err_val, int32_t err_status);
 
 enum snmp_syntax parse_syntax(char *str);
-char *snmp_parse_suboid(char *str, struct asn_oid *oid);
+char *snmp_parse_suboid(char *str, asn_oid_t *oid);
 char *snmp_parse_index(struct snmp_toolinfo *, char *str, struct snmp_object *object);
-int32_t snmp_parse_numoid(char *argv, struct asn_oid * var);
-int32_t snmp_suboid_append(struct asn_oid *var, asn_subid_t suboid);
-int32_t snmp_suboid_pop(struct asn_oid *var);
+int32_t snmp_parse_numoid(char *argv, asn_oid_t * var);
+int32_t snmp_suboid_append(asn_oid_t *var, asn_subid_t suboid);
+int32_t snmp_suboid_pop(asn_oid_t *var);
 
-typedef int32_t (*snmp_verify_vbind_f) (struct snmp_toolinfo *, struct snmp_pdu *pdu,
+typedef int32_t (*snmp_verify_vbind_f) (struct snmp_toolinfo *, snmp_pdu_t *pdu,
     struct snmp_object *obj);
-typedef int32_t (*snmp_add_vbind_f) (struct snmp_pdu *pdu,
+typedef int32_t (*snmp_add_vbind_f) (snmp_pdu_t *pdu,
     struct snmp_object *obj);
 int32_t snmp_pdu_add_bindings(struct snmp_toolinfo *, snmp_verify_vbind_f vfunc, snmp_add_vbind_f afunc,
-    struct snmp_pdu *pdu, int32_t);
+    snmp_pdu_t *pdu, int32_t);
 
-int32_t snmp_output_numval(struct snmp_toolinfo *, struct snmp_value * val, struct snmp_oid2str *entry);
-void snmp_output_val(struct snmp_value *val);
-int32_t snmp_output_resp(struct snmp_toolinfo *, struct snmp_pdu *pdu);
-void snmp_output_err_resp(struct snmp_toolinfo *, struct snmp_pdu *pdu);
+int32_t snmp_output_numval(struct snmp_toolinfo *, snmp_value_t * val, struct snmp_oid2str *entry);
+void snmp_output_val(snmp_value_t *val);
+int32_t snmp_output_resp(struct snmp_toolinfo *, snmp_pdu_t *pdu);
+void snmp_output_err_resp(struct snmp_toolinfo *, snmp_pdu_t *pdu);
 
 #endif /* _BSNMP_TOOLS_H_ */

@@ -61,7 +61,7 @@
 #include "bsnmp/asn1.h"
 #include "bsnmp/snmp.h"
 #include "support.h"
-#include "snmppriv.h"
+#include "priv.h"
 
 static void snmp_error_func(const char *, ...);
 static void snmp_printf_func(const char *, ...);
@@ -129,7 +129,7 @@ const char* snmp_get_error(enum snmp_code code) {
 * Get the next variable binding from the list.
 * ASN errors on the sequence or the OID are always fatal.
 */
-static enum asn_err get_var_binding(struct asn_buf *b, struct snmp_value *binding)
+static enum asn_err get_var_binding(asn_buf_t *b, snmp_value_t *binding)
 {
     u_char type;
     asn_len_t len, trailer;
@@ -255,7 +255,7 @@ static enum asn_err get_var_binding(struct asn_buf *b, struct snmp_value *bindin
 * components can be parsed it returns either ASN_ERR_OK or the first
 * error that was found.
 */
-enum asn_err snmp_parse_pdus_hdr(struct asn_buf *b, struct snmp_pdu *pdu, asn_len_t *lenp)
+enum asn_err snmp_parse_pdus_hdr(asn_buf_t *b, snmp_pdu_t *pdu, asn_len_t *lenp)
 {
     if (pdu->type == SNMP_PDU_TRAP) {
         if (asn_get_objid(b, &pdu->enterprise) != ASN_ERR_OK) {
@@ -301,10 +301,10 @@ enum asn_err snmp_parse_pdus_hdr(struct asn_buf *b, struct snmp_pdu *pdu, asn_le
     return (ASN_ERR_OK);
 }
 
-static enum asn_err parse_pdus(struct asn_buf *b, struct snmp_pdu *pdu, int32_t *ip)
+static enum asn_err parse_pdus(asn_buf_t *b, snmp_pdu_t *pdu, int32_t *ip)
 {
     asn_len_t len, trailer;
-    struct snmp_value *v;
+    snmp_value_t *v;
     enum asn_err err, err1;
 
     err = snmp_parse_pdus_hdr(b, pdu, &len);
@@ -338,11 +338,11 @@ static enum asn_err parse_pdus(struct asn_buf *b, struct snmp_pdu *pdu, int32_t 
 }
 
 
-static enum asn_err parse_secparams(struct asn_buf *b, struct snmp_pdu *pdu)
+static enum asn_err parse_secparams(asn_buf_t *b, snmp_pdu_t *pdu)
 {
     asn_len_t octs_len;
     u_char buf[256]; /* XXX: calc max possible size here */
-    struct asn_buf tb;
+    asn_buf_t tb;
 
     memset(buf, 0, 256);
     tb.asn_ptr = buf;
@@ -408,10 +408,10 @@ static enum asn_err parse_secparams(struct asn_buf *b, struct snmp_pdu *pdu)
     return (ASN_ERR_OK);
 }
 
-static enum snmp_code pdu_encode_secparams(struct asn_buf *b, struct snmp_pdu *pdu)
+static enum snmp_code pdu_encode_secparams(asn_buf_t *b, snmp_pdu_t *pdu)
 {
     u_char buf[256], *sptr;
-    struct asn_buf tb;
+    asn_buf_t tb;
     size_t auth_off, moved = 0;
 
     auth_off = 0;
@@ -481,7 +481,7 @@ static enum snmp_code pdu_encode_secparams(struct asn_buf *b, struct snmp_pdu *p
 * decoded, ip points to the index of the failed variable (errors
 * OORANGE, BADLEN or BADVERS).
 */
-enum snmp_code snmp_pdu_decode(struct asn_buf *b, struct snmp_pdu *pdu, int32_t *ip)
+enum snmp_code snmp_pdu_decode(asn_buf_t *b, snmp_pdu_t *pdu, int32_t *ip)
 {
     enum snmp_code code;
 
@@ -513,7 +513,7 @@ enum snmp_code snmp_pdu_decode(struct asn_buf *b, struct snmp_pdu *pdu, int32_t 
     return (code);
 }
 
-enum snmp_code snmp_pdu_decode_header(struct asn_buf *b, struct snmp_pdu *pdu)
+enum snmp_code snmp_pdu_decode_header(asn_buf_t *b, snmp_pdu_t *pdu)
 {
     int32_t version;
     u_int octs_len;
@@ -599,7 +599,7 @@ enum snmp_code snmp_pdu_decode_header(struct asn_buf *b, struct snmp_pdu *pdu)
     return (SNMP_CODE_OK);
 }
 
-enum snmp_code snmp_pdu_decode_scoped(struct asn_buf *b, struct snmp_pdu *pdu, int32_t *ip)
+enum snmp_code snmp_pdu_decode_scoped(asn_buf_t *b, snmp_pdu_t *pdu, int32_t *ip)
 {
     u_char type;
     asn_len_t len, trailer;
@@ -684,7 +684,7 @@ enum snmp_code snmp_pdu_decode_scoped(struct asn_buf *b, struct snmp_pdu *pdu, i
     return (SNMP_CODE_OK);
 }
 
-enum snmp_code snmp_pdu_decode_secmode(struct asn_buf *b, struct snmp_pdu *pdu)
+enum snmp_code snmp_pdu_decode_secmode(asn_buf_t *b, snmp_pdu_t *pdu)
 {
     u_char type;
     enum snmp_code code;
@@ -725,11 +725,11 @@ enum snmp_code snmp_pdu_decode_secmode(struct asn_buf *b, struct snmp_pdu *pdu)
 *    0		if we need more data
 *  > 0		the length of this PDU
 */
-int snmp_pdu_snoop(const struct asn_buf *b0)
+int snmp_pdu_snoop(const asn_buf_t *b0)
 {
     u_int length;
     asn_len_t len;
-    struct asn_buf b = *b0;
+    asn_buf_t b = *b0;
 
     /* <0x10|0x20> <len> <data...> */
 
@@ -782,7 +782,7 @@ int snmp_pdu_snoop(const struct asn_buf *b0)
 * use more than 2 bytes.
 * We need a number of pointers to apply the fixes afterwards.
 */
-enum snmp_code snmp_pdu_encode_header(struct asn_buf *b, struct snmp_pdu *pdu)
+enum snmp_code snmp_pdu_encode_header(asn_buf_t *b, snmp_pdu_t *pdu)
 {
     enum asn_err err;
     u_char *v3_hdr_ptr;
@@ -885,7 +885,7 @@ enum snmp_code snmp_pdu_encode_header(struct asn_buf *b, struct snmp_pdu *pdu)
     return (SNMP_CODE_OK);
 }
 
-static enum asn_err snmp_pdu_fix_padd(struct asn_buf *b, struct snmp_pdu *pdu)
+static enum asn_err snmp_pdu_fix_padd(asn_buf_t *b, snmp_pdu_t *pdu)
 {
     asn_len_t padlen;
 
@@ -899,7 +899,7 @@ static enum asn_err snmp_pdu_fix_padd(struct asn_buf *b, struct snmp_pdu *pdu)
     return (ASN_ERR_OK);
 }
 
-enum snmp_code snmp_fix_encoding(struct asn_buf *b, struct snmp_pdu *pdu)
+enum snmp_code snmp_fix_encoding(asn_buf_t *b, snmp_pdu_t *pdu)
 {
     size_t moved = 0;
     enum snmp_code code;
@@ -950,11 +950,11 @@ enum snmp_code snmp_fix_encoding(struct asn_buf *b, struct snmp_pdu *pdu)
 * Encode a binding. Caller must ensure, that the syntax is ok for that version.
 * Be sure not to cobber b, when something fails.
 */
-enum asn_err snmp_binding_encode(struct asn_buf *b, const struct snmp_value *binding)
+enum asn_err snmp_binding_encode(asn_buf_t *b, const snmp_value_t *binding)
 {
     u_char *ptr;
     enum asn_err err;
-    struct asn_buf save = *b;
+    asn_buf_t save = *b;
 
     if ((err = asn_put_temp_header(b, (ASN_TYPE_SEQUENCE |
         ASN_TYPE_CONSTRUCTED), &ptr)) != ASN_ERR_OK) {
@@ -1036,7 +1036,7 @@ enum asn_err snmp_binding_encode(struct asn_buf *b, const struct snmp_value *bin
 /*
 * Encode an PDU.
 */
-enum snmp_code snmp_pdu_encode(struct snmp_pdu *pdu, struct asn_buf *resp_b)
+enum snmp_code snmp_pdu_encode(snmp_pdu_t *pdu, asn_buf_t *resp_b)
 {
     u_int idx;
     enum snmp_code err;
@@ -1051,7 +1051,7 @@ enum snmp_code snmp_pdu_encode(struct snmp_pdu *pdu, struct asn_buf *resp_b)
     return (snmp_fix_encoding(resp_b, pdu));
 }
 
-static void dump_binding(const struct snmp_value *b)
+static void dump_binding(const snmp_value_t *b)
 {
     u_int i;
     char buf[ASN_OIDSTRLEN];
@@ -1116,7 +1116,7 @@ static void dump_binding(const struct snmp_value *b)
     }
 }
 
-static __inline void dump_bindings(const struct snmp_pdu *pdu)
+static __inline void dump_bindings(const snmp_pdu_t *pdu)
 {
     u_int i;
 
@@ -1127,7 +1127,7 @@ static __inline void dump_bindings(const struct snmp_pdu *pdu)
     }
 }
 
-static __inline void dump_notrap(const struct snmp_pdu *pdu)
+static __inline void dump_notrap(const snmp_pdu_t *pdu)
 {
     snmp_printf(" request_id=%d", pdu->request_id);
     snmp_printf(" error_status=%d", pdu->error_status);
@@ -1135,7 +1135,7 @@ static __inline void dump_notrap(const struct snmp_pdu *pdu)
     dump_bindings(pdu);
 }
 
-void snmp_pdu_dump(const struct snmp_pdu *pdu)
+void snmp_pdu_dump(const snmp_pdu_t *pdu)
 {
     char buf[ASN_OIDSTRLEN];
     const char *vers;
@@ -1190,14 +1190,14 @@ void snmp_pdu_dump(const struct snmp_pdu *pdu)
     }
 }
 
-void snmp_value_free(struct snmp_value *value)
+void snmp_value_free(snmp_value_t *value)
 {
     if (value->syntax == SNMP_SYNTAX_OCTETSTRING)
         free(value->v.octetstring.octets);
     value->syntax = SNMP_SYNTAX_NULL;
 }
 
-int snmp_value_copy(struct snmp_value *to, const struct snmp_value *from)
+int snmp_value_copy(snmp_value_t *to, const snmp_value_t *from)
 {
     to->var = from->var;
     to->syntax = from->syntax;
@@ -1217,7 +1217,7 @@ int snmp_value_copy(struct snmp_value *to, const struct snmp_value *from)
     return (0);
 }
 
-void snmp_pdu_init_secparams(struct snmp_pdu *pdu)
+void snmp_pdu_init_secparams(snmp_pdu_t *pdu)
 {
     int32_t rval;
 
@@ -1245,7 +1245,7 @@ void snmp_pdu_init_secparams(struct snmp_pdu *pdu)
     }
 }
 
-void snmp_pdu_free(struct snmp_pdu *pdu)
+void snmp_pdu_free(snmp_pdu_t *pdu)
 {
     u_int i;
 
@@ -1256,7 +1256,7 @@ void snmp_pdu_free(struct snmp_pdu *pdu)
 /*
 * Parse an ASCII SNMP value into the binary form
 */
-int snmp_value_parse(const char *str, enum snmp_syntax syntax, union snmp_values *v)
+int snmp_value_parse(const char *str, enum snmp_syntax syntax, snmp_values_t *v)
 {
     char *end;
 
@@ -1489,22 +1489,22 @@ static void snmp_printf_func(const char *fmt, ...)
     va_end(ap);
 }
 
-static enum snmp_code snmp_parse_bad_oid(const struct asn_oid* oid) {
+static enum snmp_code snmp_parse_bad_oid(const asn_oid_t* oid) {
 	static asn_subid_t      badOid[] =
         { 1, 3, 6, 1, 6, 3, 15, 1, 1};
 
-	static asn_subid_t      unknownSecurityLevel[] =
-        { 1, 3, 6, 1, 6, 3, 15, 1, 1, 1, 0 };
-    static asn_subid_t      notInTimeWindow[] =
-        { 1, 3, 6, 1, 6, 3, 15, 1, 1, 2, 0 };
-    static asn_subid_t      unknownUserName[] =
-        { 1, 3, 6, 1, 6, 3, 15, 1, 1, 3, 0 };
-    static asn_subid_t      unknownEngineID[] =
-        { 1, 3, 6, 1, 6, 3, 15, 1, 1, 4, 0 };
-    static asn_subid_t      wrongDigest[] = 
-	    { 1, 3, 6, 1, 6, 3, 15, 1, 1, 5, 0 };
-    static asn_subid_t      decryptionError[] =
-        { 1, 3, 6, 1, 6, 3, 15, 1, 1, 6, 0 };
+//	static asn_subid_t      unknownSecurityLevel[] =
+//        { 1, 3, 6, 1, 6, 3, 15, 1, 1, 1, 0 };
+//  static asn_subid_t      notInTimeWindow[] =
+//        { 1, 3, 6, 1, 6, 3, 15, 1, 1, 2, 0 };
+//  static asn_subid_t      unknownUserName[] =
+//        { 1, 3, 6, 1, 6, 3, 15, 1, 1, 3, 0 };
+//  static asn_subid_t      unknownEngineID[] =
+//        { 1, 3, 6, 1, 6, 3, 15, 1, 1, 4, 0 };
+//  static asn_subid_t      wrongDigest[] = 
+//	    { 1, 3, 6, 1, 6, 3, 15, 1, 1, 5, 0 };
+//  static asn_subid_t      decryptionError[] =
+//        { 1, 3, 6, 1, 6, 3, 15, 1, 1, 6, 0 };
 
 	if(11 == oid->len && 0 == memcmp(badOid, oid->subs, sizeof(asn_subid_t) * 9)) {
 		switch(oid->subs[0]) {
@@ -1533,7 +1533,7 @@ static enum snmp_code snmp_parse_bad_oid(const struct asn_oid* oid) {
 * syntaxes must be the same in response and request - the OIDs must be the
 * same in response and request
 */
-static enum snmp_code snmp_check_set_resp(const struct snmp_pdu * req, const struct snmp_pdu * resp)
+static enum snmp_code snmp_check_set_resp(const snmp_pdu_t * req, const snmp_pdu_t * resp)
 {
     uint32_t i;
     for (i = 0; i < req->nbindings; i++) {
@@ -1554,7 +1554,7 @@ static enum snmp_code snmp_check_set_resp(const struct snmp_pdu * req, const str
 * This is a (almost) complete copy of snmp_pdu_check() - with matching syntaxes
 * checks and some other checks skiped.
 */
-static enum snmp_code snmp_check_get_resp(const struct snmp_pdu *resp, const struct snmp_pdu *req)
+static enum snmp_code snmp_check_get_resp(const snmp_pdu_t *resp, const snmp_pdu_t *req)
 {
     uint32_t i;
 
@@ -1575,7 +1575,7 @@ static enum snmp_code snmp_check_get_resp(const struct snmp_pdu *resp, const str
     return (SNMP_CODE_OK);
 }
 
-static enum snmp_code snmp_check_getbulk_resp(const struct snmp_pdu *resp, const struct snmp_pdu *req)
+static enum snmp_code snmp_check_getbulk_resp(const snmp_pdu_t *resp, const snmp_pdu_t *req)
 {
     int32_t N, R, M, r;
 	\
@@ -1607,7 +1607,7 @@ static enum snmp_code snmp_check_getbulk_resp(const struct snmp_pdu *resp, const
 }
 
 
-static enum snmp_code snmp_check_getnext_resp(const struct snmp_pdu *resp, const struct snmp_pdu *req)
+static enum snmp_code snmp_check_getnext_resp(const snmp_pdu_t *resp, const snmp_pdu_t *req)
 {
     uint32_t i;
 
@@ -1626,7 +1626,7 @@ static enum snmp_code snmp_check_getnext_resp(const struct snmp_pdu *resp, const
 /*
 * Should be called to check a responce to get/getnext/getbulk.
 */
-enum snmp_code snmp_pdu_check(const struct snmp_pdu *resp, const struct snmp_pdu *req)
+enum snmp_code snmp_pdu_check(const snmp_pdu_t *resp, const snmp_pdu_t *req)
 {
 	enum snmp_code ret = SNMP_CODE_OK;
 

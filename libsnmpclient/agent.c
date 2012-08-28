@@ -32,7 +32,11 @@
  */
 #include "bsnmp/config.h"
 #include <sys/types.h>
+#ifdef _WIN32
+#include <compat/sys/queue.h>
+#else
 #include <sys/queue.h>
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <stddef.h>
@@ -48,7 +52,7 @@
 #include "bsnmp/snmp.h"
 #include "bsnmp/agent.h"
 #include "support.h"
-#include "snmppriv.h"
+#include "priv.h"
 
 static void snmp_debug_func(const char *fmt, ...);
 
@@ -114,7 +118,7 @@ snmp_init_context(void)
  * the correct SNMPv2 GET exception code.
  */
 static struct snmp_node *
-find_node(const struct snmp_value *value, enum snmp_syntax *errp)
+find_node(const snmp_value_t *value, enum snmp_syntax *errp)
 {
 	struct snmp_node *tp;
 
@@ -156,7 +160,7 @@ find_node(const struct snmp_value *value, enum snmp_syntax *errp)
 }
 
 static struct snmp_node *
-find_subnode(const struct snmp_value *value)
+find_subnode(const snmp_value_t *value)
 {
 	struct snmp_node *tp;
 
@@ -168,7 +172,7 @@ find_subnode(const struct snmp_value *value)
 }
 
 static void
-snmp_pdu_create_response(struct snmp_pdu *pdu, struct snmp_pdu *resp)
+snmp_pdu_create_response(snmp_pdu_t *pdu, snmp_pdu_t *resp)
 {
 	memset(resp, 0, sizeof(*resp));
 	strcpy(resp->community, pdu->community);
@@ -198,8 +202,8 @@ snmp_pdu_create_response(struct snmp_pdu *pdu, struct snmp_pdu *resp)
  * the pdu error status and index will be set.
  */
 enum snmp_ret
-snmp_get(struct snmp_pdu *pdu, struct asn_buf *resp_b,
-    struct snmp_pdu *resp, void *data)
+snmp_get(snmp_pdu_t *pdu, asn_buf_t *resp_b,
+    snmp_pdu_t *resp, void *data)
 {
 	int ret;
 	u_int i;
@@ -282,7 +286,7 @@ snmp_get(struct snmp_pdu *pdu, struct asn_buf *resp_b,
 }
 
 static struct snmp_node *
-next_node(const struct snmp_value *value, int *pnext)
+next_node(const snmp_value_t *value, int *pnext)
 {
 	struct snmp_node *tp;
 
@@ -326,8 +330,8 @@ next_node(const struct snmp_value *value, int *pnext)
 }
 
 static enum snmp_ret
-do_getnext(struct context *context, const struct snmp_value *inb,
-    struct snmp_value *outb, struct snmp_pdu *pdu)
+do_getnext(struct context *context, const snmp_value_t *inb,
+    snmp_value_t *outb, snmp_pdu_t *pdu)
 {
 	const struct snmp_node *tp;
 	int ret, next;
@@ -395,8 +399,8 @@ do_getnext(struct context *context, const struct snmp_value *inb,
  * Build the response PDU on the fly. The return is:
  */
 enum snmp_ret
-snmp_getnext(struct snmp_pdu *pdu, struct asn_buf *resp_b,
-    struct snmp_pdu *resp, void *data)
+snmp_getnext(snmp_pdu_t *pdu, asn_buf_t *resp_b,
+    snmp_pdu_t *resp, void *data)
 {
 	struct context context;
 	u_int i;
@@ -444,8 +448,8 @@ snmp_getnext(struct snmp_pdu *pdu, struct asn_buf *resp_b,
 }
 
 enum snmp_ret
-snmp_getbulk(struct snmp_pdu *pdu, struct asn_buf *resp_b,
-    struct snmp_pdu *resp, void *data)
+snmp_getbulk(snmp_pdu_t *pdu, asn_buf_t *resp_b,
+    snmp_pdu_t *resp, void *data)
 {
 	struct context context;
 	u_int i;
@@ -546,9 +550,9 @@ snmp_getbulk(struct snmp_pdu *pdu, struct asn_buf *resp_b,
  * Rollback a SET operation. Failed index is 'i'.
  */
 static void
-rollback(struct context *context, struct snmp_pdu *pdu, u_int i)
+rollback(struct context *context, snmp_pdu_t *pdu, u_int i)
 {
-	struct snmp_value *b;
+	snmp_value_t *b;
 	const struct snmp_node *np;
 	int ret;
 
@@ -650,15 +654,15 @@ snmp_dep_finish(struct snmp_context *ctx)
  * Do a SET operation.
  */
 enum snmp_ret
-snmp_set(struct snmp_pdu *pdu, struct asn_buf *resp_b,
-    struct snmp_pdu *resp, void *data)
+snmp_set(snmp_pdu_t *pdu, asn_buf_t *resp_b,
+    snmp_pdu_t *resp, void *data)
 {
 	int ret;
 	u_int i;
 	enum asn_err asnerr;
 	struct context context;
 	const struct snmp_node *np;
-	struct snmp_value *b;
+	snmp_value_t *b;
 	enum snmp_syntax except;
 
 	memset(&context, 0, sizeof(context));
@@ -903,8 +907,8 @@ snmp_set(struct snmp_pdu *pdu, struct asn_buf *resp_b,
  * Lookup a dependency. If it doesn't exist, create one
  */
 struct snmp_dependency *
-snmp_dep_lookup(struct snmp_context *ctx, const struct asn_oid *obj,
-    const struct asn_oid *idx, size_t len, snmp_depop_t func)
+snmp_dep_lookup(struct snmp_context *ctx, const asn_oid_t *obj,
+    const asn_oid_t *idx, size_t len, snmp_depop_t func)
 {
 	struct context *context;
 	struct depend *d;
@@ -951,11 +955,11 @@ snmp_dep_lookup(struct snmp_context *ctx, const struct asn_oid *obj,
  * that has sent us junk in the first place. 
  */
 enum snmp_ret
-snmp_make_errresp(const struct snmp_pdu *pdu, struct asn_buf *pdu_b,
-    struct asn_buf *resp_b)
+snmp_make_errresp(const snmp_pdu_t *pdu, asn_buf_t *pdu_b,
+    asn_buf_t *resp_b)
 {
 	asn_len_t len = 0;
-	struct snmp_pdu resp;
+	snmp_pdu_t resp;
 	enum asn_err err;
 	enum snmp_code code;
 

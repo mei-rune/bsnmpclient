@@ -2,13 +2,14 @@ jit
 generated
 *.o
 *.*~
-options.gypi
 *.xcodeproj
 out/
 *.swp
 
 snmpget
 
+/build
+/libsnmpclient/build
 /out
 /default
 # various stuff that VC++ produces/uses
@@ -25,3 +26,4 @@ _UpgradeReport_Files/
 ipch/
 *.sdf
 *.opensdf
+tools/gyp

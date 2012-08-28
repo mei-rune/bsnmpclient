@@ -36,8 +36,10 @@
 */
 #include "bsnmp/config.h"
 #include <sys/types.h>
+#ifdef _WIN32
+#include "compat/sys/queue.h"
+#else
 #include <sys/queue.h>
-#ifndef _WIN32
 #include <sys/time.h>
 #include <sys/socket.h>
 #include <sys/un.h>
@@ -69,13 +71,13 @@
 #include "bsnmp/snmp.h"
 #include "bsnmp/client.h"
 #include "support.h"
-#include "snmppriv.h"
+#include "priv.h"
 
 
 /* List of all outstanding requests */
 struct sent_pdu {	
     int		reqid;
-    struct snmp_pdu	*pdu;
+    snmp_pdu_t	*pdu;
     struct timeval	time;
     u_int		retrycount;
     snmp_send_cb_f	callback;
@@ -104,7 +106,7 @@ TAILQ_HEAD(table, entry);
 */
 struct work {
     TAILQ_ENTRY(work)	link;
-    struct asn_oid		index;
+    asn_oid_t		index;
 };
 TAILQ_HEAD(worklist, work);
 
@@ -120,7 +122,7 @@ struct tabwork {
     u_int		iter;
     snmp_table_cb_f	callback;
     void		*arg;
-    struct snmp_pdu	pdu;
+    snmp_pdu_t	pdu;
 };
 
 /*
@@ -172,14 +174,14 @@ static void table_free(struct tabwork *work, int all)
 * Find the correct table entry for the given variable. If non exists,
 * create one.
 */
-static struct entry *table_find(struct snmp_client* client, struct tabwork *work, const struct asn_oid *var)
+static struct entry *table_find(struct snmp_client* client, struct tabwork *work, const asn_oid_t *var)
 {
     struct entry *e, *e1;
     struct work *w, *w1;
     u_int i, p, j;
     size_t len;
     u_char *ptr;
-    struct asn_oid oid;
+    asn_oid_t oid;
 
     /* get index */
     asn_slice_oid(&oid, var, work->descr->table.len + 2, var->len);
@@ -273,7 +275,7 @@ static struct entry *table_find(struct snmp_client* client, struct tabwork *work
             }
             for (j = 0; j < oid.len; j++)
                 oid.subs[j] = var->subs[p++];
-            *(struct asn_oid *)(void *)((u_char *)e +
+            *(asn_oid_t *)(void *)((u_char *)e +
                 work->descr->entries[i].offset) = oid;
             break;
 
@@ -361,7 +363,7 @@ err:
 * Assign the value
 */
 static int table_value(struct snmp_client* client, const struct snmp_table *descr, struct entry *e,
-    const struct snmp_value *b)
+    const snmp_value_t *b)
 {
     u_int i;
     u_char *ptr;
@@ -402,7 +404,7 @@ static int table_value(struct snmp_client* client, const struct snmp_table *desc
         break;
 
     case SNMP_SYNTAX_OID:
-        *(struct asn_oid *)(void *)((u_char *)e + descr->entries[i].offset) =
+        *(asn_oid_t *)(void *)((u_char *)e + descr->entries[i].offset) =
             b->v.oid;
         break;
 
@@ -437,7 +439,7 @@ static int table_value(struct snmp_client* client, const struct snmp_table *desc
 /*
 * Initialize the first PDU to send
 */
-static void table_init_pdu(struct snmp_client* client, const struct snmp_table *descr, struct snmp_pdu *pdu)
+static void table_init_pdu(struct snmp_client* client, const struct snmp_table *descr, snmp_pdu_t *pdu)
 {
     if (client->version == SNMP_V1)
         snmp_pdu_create(client, pdu, SNMP_PDU_GETNEXT);
@@ -464,9 +466,9 @@ static void table_init_pdu(struct snmp_client* client, const struct snmp_table *
 *	-2 - Last change changed - again
 *	+1 - ok, continue
 */
-static int table_check_response(struct snmp_client* client, struct tabwork *work, const struct snmp_pdu *resp)
+static int table_check_response(struct snmp_client* client, struct tabwork *work, const snmp_pdu_t *resp)
 {
-    const struct snmp_value *b;
+    const snmp_value_t *b;
     struct entry *e;
 
     if (resp->error_status != SNMP_ERR_NOERROR) {
@@ -555,7 +557,7 @@ static int table_check_cons(struct snmp_client* client, struct tabwork *work)
 */
 int snmp_table_fetch(struct snmp_client* client, const struct snmp_table *descr, void *list)
 {
-    struct snmp_pdu resp;
+    snmp_pdu_t resp;
     struct tabwork work;
     int ret;
 
@@ -619,7 +621,7 @@ again:
 /*
 * Callback for table
 */
-static void table_cb(struct snmp_client *client, struct snmp_pdu *req __unused, struct snmp_pdu *resp, void *arg)
+static void table_cb(struct snmp_client *client, snmp_pdu_t *req __unused, snmp_pdu_t *resp, void *arg)
 {
     struct tabwork *work = (struct tabwork *)arg;
     int ret;
@@ -731,7 +733,7 @@ int snmp_table_fetch_async(struct snmp_client* client, const struct snmp_table *
 /*
 * Append an index to an oid
 */
-int snmp_oid_append(struct asn_oid *oid, const char *fmt, ...)
+int snmp_oid_append(asn_oid_t *oid, const char *fmt, ...)
 {
     va_list	va;
     int	size;
@@ -751,7 +753,7 @@ int snmp_oid_append(struct asn_oid *oid, const char *fmt, ...)
         case 'i': 
             /* just an integer more */
             if (oid->len + 1 > ASN_MAXOIDLEN) {
-                warnx("%s: OID too long for integer", __func__);
+                snmp_printf("%s: OID too long for integer", __func__);
                 ret = -1;
                 break;
             }
@@ -761,7 +763,7 @@ int snmp_oid_append(struct asn_oid *oid, const char *fmt, ...)
         case 'a':
             /* append an IP address */
             if (oid->len + 4 > ASN_MAXOIDLEN) {
-                warnx("%s: OID too long for ip-addr", __func__);
+                snmp_printf("%s: OID too long for ip-addr", __func__);
                 ret = -1;
                 break;
             }
@@ -779,7 +781,7 @@ int snmp_oid_append(struct asn_oid *oid, const char *fmt, ...)
             str = (const u_char *)va_arg(va, const char *);
             len = strlen((const char *)str);
             if (oid->len + len + 1 > ASN_MAXOIDLEN) {
-                warnx("%s: OID too long for string", __func__);
+                snmp_printf("%s: OID too long for string", __func__);
                 ret = -1;
                 break;
             }
@@ -801,7 +803,7 @@ int snmp_oid_append(struct asn_oid *oid, const char *fmt, ...)
             /* append `size` characters */ 
             str = (const u_char *)va_arg(va, const char *);
             if (oid->len + size > ASN_MAXOIDLEN) {
-                warnx("%s: OID too long for string", __func__);
+                snmp_printf("%s: OID too long for string", __func__);
                 ret = -1;
                 break;
             }
@@ -814,7 +816,7 @@ int snmp_oid_append(struct asn_oid *oid, const char *fmt, ...)
             size = va_arg(va, size_t);
             str = va_arg(va, const u_char *);
             if (oid->len + size + 1 > ASN_MAXOIDLEN) {
-                warnx("%s: OID too long for string", __func__);
+                snmp_printf("%s: OID too long for string", __func__);
                 ret = -1;
                 break;
             }
@@ -1125,9 +1127,9 @@ void snmp_close(struct snmp_client *client)
 /*
 * initialize a snmp_pdu structure
 */
-void snmp_pdu_create(struct snmp_client *client, struct snmp_pdu *pdu, u_int op)
+void snmp_pdu_create(struct snmp_client *client, snmp_pdu_t *pdu, u_int op)
 {
-    memset(pdu, 0, sizeof(struct snmp_pdu));
+    memset(pdu, 0, sizeof(snmp_pdu_t));
 
     if (op == SNMP_PDU_SET)
         strlcpy(pdu->community, client->write_community,
@@ -1171,18 +1173,18 @@ void snmp_pdu_create(struct snmp_client *client, struct snmp_pdu *pdu, u_int op)
         sizeof(pdu->context_name));
 }
 
-/* add pairs of (struct asn_oid, enum snmp_syntax) to an existing pdu */
+/* add pairs of (asn_oid_t, enum snmp_syntax) to an existing pdu */
 /* added 10/04/02 by kek: check for MAX_BINDINGS */
 int snmp_add_binding(struct snmp_v1_pdu *pdu, ...)
 {
     va_list ap;
-    const struct asn_oid *oid;
+    const asn_oid_t *oid;
     u_int ret;
 
     va_start(ap, pdu);
 
     ret = pdu->nbindings;
-    while ((oid = va_arg(ap, const struct asn_oid *)) != NULL) {
+    while ((oid = va_arg(ap, const asn_oid_t *)) != NULL) {
         if (pdu->nbindings >= SNMP_MAX_BINDINGS){
             va_end(ap);
             return (-1);
@@ -1212,10 +1214,10 @@ static int32_t snmp_next_reqid(struct snmp_client * c)
 /*
 * Send request and return request id.
 */
-static int32_t snmp_send_packet(struct snmp_client *client, struct snmp_pdu * pdu)
+static int32_t snmp_send_packet(struct snmp_client *client, snmp_pdu_t * pdu)
 {
     u_char *buf;
-    struct asn_buf b;
+    asn_buf_t b;
     ssize_t ret;
 
     if ((buf = (u_char*)malloc(client->txbuflen)) == NULL) {
@@ -1278,7 +1280,7 @@ static void snmp_timeout(struct snmp_client *client, void * listentry_ptr)
     }
 }
 
-int32_t snmp_pdu_send(struct snmp_client *client, struct snmp_pdu *pdu, snmp_send_cb_f func, void *arg)
+int32_t snmp_pdu_send(struct snmp_client *client, snmp_pdu_t *pdu, snmp_send_cb_f func, void *arg)
 {
     struct sent_pdu *listentry;
     int32_t id;
@@ -1296,8 +1298,9 @@ int32_t snmp_pdu_send(struct snmp_client *client, struct snmp_pdu *pdu, snmp_sen
 
     /* add entry to list of sent PDUs */
     listentry->pdu = pdu;
-    if (gettimeofday(&listentry->time, NULL) == -1)
-        warn("gettimeofday() failed");
+    if (gettimeofday(&listentry->time, NULL) == -1) {
+        snmp_printf("gettimeofday() failed");
+    }
 
     listentry->reqid = pdu->request_id;
     listentry->callback = func;
@@ -1326,14 +1329,14 @@ int32_t snmp_pdu_send(struct snmp_client *client, struct snmp_pdu *pdu, snmp_sen
 *	+1 if packet received
 */
 static int snmp_receive_packet(struct snmp_client* client, 
-     struct snmp_pdu *pdu, struct timeval *tv)
+     snmp_pdu_t *pdu, struct timeval *tv)
 {
     int dopoll, setpoll;
     int flags;
     int saved_errno;
     u_char *buf;
     int ret;
-    struct asn_buf abuf;
+    asn_buf_t abuf;
     int32_t ip;
 #ifdef bsdi
     int optlen;
@@ -1448,12 +1451,12 @@ static int snmp_receive_packet(struct snmp_client* client,
     return (+1);
 }
 
-static int snmp_deliver_packet(struct snmp_client* client, struct snmp_pdu * resp)
+static int snmp_deliver_packet(struct snmp_client* client, snmp_pdu_t * resp)
 {
     struct sent_pdu *listentry;
 
     if (resp->type != SNMP_PDU_RESPONSE) {
-        warn("ignoring snmp pdu %u", resp->type);
+        snmp_printf("ignoring snmp pdu %u", resp->type);
         return (-1);
     }
 
@@ -1477,11 +1480,11 @@ int snmp_receive(struct snmp_client* client, int blocking)
     int ret;
 
     struct timeval tv;
-    struct snmp_pdu * resp;
+    snmp_pdu_t * resp;
 
     memset(&tv, 0, sizeof(tv));
 
-    resp = malloc(sizeof(struct snmp_pdu));
+    resp = malloc(sizeof(snmp_pdu_t));
     if (resp == NULL) {
         seterr(client, "no memory for returning PDU");
         return (-1) ;
@@ -1504,7 +1507,7 @@ int snmp_dialog(struct snmp_client *client, struct snmp_v1_pdu *req, struct snmp
     int ret;
     struct timeval tv = client->timeout;
     struct timeval end;
-    struct snmp_pdu pdu;
+    snmp_pdu_t pdu;
 
     /*
     * Make a copy of the request and replace the syntaxes by NULL
@@ -1547,17 +1550,17 @@ int snmp_dialog(struct snmp_client *client, struct snmp_v1_pdu *req, struct snmp
     return (-1);
 }
 
-int snmp_discover_engine(struct snmp_client *client, char *passwd)
+int snmp_discover_engine(struct snmp_client *client, char* user, char *passwd, char* privKey)
 {
-    char cname[SNMP_ADM_STR32_SIZ];
+    
+	char sec_name[SNMP_ADM_STR32_SIZ];
     enum snmp_authentication cap;
     enum snmp_privacy cpp;
-    struct snmp_pdu req, resp;
+    snmp_pdu_t req, resp;
 
     if (client->version != SNMP_V3)
         seterr(client, "wrong version");
 
-    strlcpy(cname, client->user.sec_name, sizeof(cname));
     cap = client->user.auth_proto;
     cpp = client->user.priv_proto;
 
@@ -1566,6 +1569,7 @@ int snmp_discover_engine(struct snmp_client *client, char *passwd)
     client->engine.engine_time = 0;
     client->user.auth_proto = SNMP_AUTH_NOAUTH;
     client->user.priv_proto = SNMP_PRIV_NOPRIV;
+    memcpy(sec_name, client->user.sec_name, sizeof(client->user.sec_name));
     memset(client->user.sec_name, 0, sizeof(client->user.sec_name));
 
     snmp_pdu_create(client, &req, SNMP_PDU_GET);
@@ -1588,25 +1592,47 @@ int snmp_discover_engine(struct snmp_client *client, char *passwd)
     memcpy(client->engine.engine_id, resp.engine.engine_id,
         resp.engine.engine_len);
 
-    strlcpy(client->user.sec_name, cname,
-        sizeof(client->user.sec_name));
+    if(NULL != user) {
+        strlcpy(client->user.sec_name, user, sizeof(client->user.sec_name));
+    } else {
+        memcpy(client->user.sec_name, sec_name, sizeof(client->user.sec_name));
+    }
     client->user.auth_proto = cap;
-    client->user.priv_proto = cpp;
+    client->user.priv_proto = SNMP_PRIV_NOPRIV;
+    
+    if (NULL != passwd) {
+        if (snmp_set_auth_passphrase(&client->user, passwd, strlen(passwd)) != SNMP_CODE_OK ||
+            snmp_auth_to_localization_keys(&client->user, client->engine.engine_id,
+            client->engine.engine_len) != SNMP_CODE_OK)
+            return (-1);
+    } else if (SNMP_AUTH_NOAUTH != cap && client->user.auth_len != 0) {
 
-    if (client->user.auth_proto == SNMP_AUTH_NOAUTH)
-        return (0);
-
-    if (passwd == NULL ||
-        snmp_set_auth_passphrase(&client->user, passwd, strlen(passwd)) != SNMP_CODE_OK ||
-        snmp_auth_to_localization_keys(&client->user, client->engine.engine_id,
-        client->engine.engine_len) != SNMP_CODE_OK)
-        return (-1);
+        if(snmp_auth_to_localization_keys(&client->user, client->engine.engine_id,
+            client->engine.engine_len) != SNMP_CODE_OK)
+            return (-1);
+    }
+    if (NULL != privKey) {
+        if (snmp_set_priv_passphrase(&client->user, privKey, strlen(privKey)) != SNMP_CODE_OK ||
+            snmp_priv_to_localization_keys(&client->user, client->engine.engine_id,
+            client->engine.engine_len) != SNMP_CODE_OK)
+            return (-1);
+    } else if (SNMP_PRIV_NOPRIV != cpp && client->user.priv_len != 0) {
+        
+        if(snmp_priv_to_localization_keys(&client->user, client->engine.engine_id,
+            client->engine.engine_len) != SNMP_CODE_OK)
+            return (-1);
+    }
 
     if (resp.engine.engine_boots != 0)
         client->engine.engine_boots = resp.engine.engine_boots;
 
     if (resp.engine.engine_time != 0) {
         client->engine.engine_time = resp.engine.engine_time;
+
+        
+        client->user.auth_proto = cap;
+        client->user.priv_proto = cpp;
+
         return (0);
     }
 
@@ -1629,12 +1655,14 @@ int snmp_discover_engine(struct snmp_client *client, char *passwd)
 
     client->engine.engine_boots = resp.engine.engine_boots;
     client->engine.engine_time = resp.engine.engine_time;
+    
+    client->user.auth_proto = cap;
+    client->user.priv_proto = cpp;
 
     return (0);
 }
 
-int
-    snmp_client_set_host(struct snmp_client *cl, const char *h)
+int snmp_client_set_host(struct snmp_client *cl, const char *h)
 {
     char *np;
 
@@ -1653,8 +1681,7 @@ int
     return (0);
 }
 
-int
-    snmp_client_set_port(struct snmp_client *cl, const char *p)
+int snmp_client_set_port(struct snmp_client *cl, const char *p)
 {
     char *np;
 
@@ -1673,13 +1700,30 @@ int
     return (0);
 }
 
+
+const char* strscan(const char* s, char ch) 
+{
+    const char *p;
+
+    for (p = s; *p != '\0'; p++) {
+        if (*p == '\\' && p[1] != '\0') {
+            p++;
+            continue;
+        }
+        if (*p == ch)
+            break;
+    }
+    return p;
+}
+
 /*
 * parse a server specification
 *
 * [trans::][community@][server][:port]
+* [trans::][name@[auth_proto%auth_pass#]][server][:port]
+* [trans::][name@[auth_proto%auth_pass#[priv_proto%priv_pass#]]][server][:port]
 */
-int
-    snmp_parse_server(struct snmp_client *sc, const char *str)
+int snmp_parse_server(struct snmp_client *sc, const char *str)
 {
     const char *p, *s = str;
 
@@ -1710,14 +1754,7 @@ int
     }
 
     /* look for a @ */
-    for (p = s; *p != '\0'; p++) {
-        if (*p == '\\' && p[1] != '\0') {
-            p++;
-            continue;
-        }
-        if (*p == '@')
-            break;
-    }
+    p = strscan(s, '@');
 
     if (*p != '\0') {
         if (p - s > SNMP_COMMUNITY_MAXLEN) {
@@ -1731,16 +1768,64 @@ int
         s = p + 1;
     }
 
-    /* look for a colon */
-    for (p = s; *p != '\0'; p++) {
-        if (*p == '\\' && p[1] != '\0') {
-            p++;
-            continue;
+    
+    /* look for a # */
+    p = strscan(s, '#');
+    if (*p != '\0') {
+        int offset;
+        
+        if(strlen(sc->read_community) > SNMP_ADM_STR32_SIZ) {
+            seterr(sc, "security name string too long");
+            return (-1);
         }
-        if (*p == ':')
-            break;
+        
+        strcpy(sc->user.sec_name, sc->read_community);
+        memset(sc->read_community, 0, sizeof(sc->read_community));
+        memset(sc->write_community, 0, sizeof(sc->write_community));
+
+        if(0 == strncmp("md5%", s, 4)) {
+            sc->user.auth_proto = SNMP_AUTH_HMAC_MD5;
+            offset = 4;
+        } else if(0 == strncmp("sha%", s, 4)) {
+            sc->user.auth_proto = SNMP_AUTH_HMAC_SHA;
+            offset = 4;
+        } else if(0 == strncmp("noauth#", s, 7)) {
+            sc->user.auth_proto = SNMP_AUTH_NOAUTH;
+            offset = 6;
+        } else {
+            seterr(sc, "auth passphrase too long");
+            return (-1);
+        }
+
+        if(SNMP_AUTH_NOAUTH != sc->user.auth_proto) {
+            snmp_set_auth_passphrase(&sc->user, s + offset, p - s - offset);
+        }
+        s = p + 1;
     }
 
+    
+    /* look for a # */
+    p = strscan(s, '#');
+    if (*p != '\0') {
+        int offset;
+
+        if(0 == strncmp("des%", s, 4)) {
+            sc->user.priv_proto = SNMP_PRIV_DES;
+            offset = 4;
+        } else if(0 == strncmp("aes%", s, 4)) {
+            sc->user.priv_proto = SNMP_PRIV_AES;
+            offset = 4;
+        } else {
+            seterr(sc, "priv passphrase too long");
+            return (-1);
+        }
+
+        snmp_set_priv_passphrase(&sc->user, s + offset, p - s - offset);
+        s = p + 1;
+    }
+
+    /* look for a colon */
+    p = strscan(s, ':');
     if (*p == ':') {
         if (p > s) {
             /* host:port */

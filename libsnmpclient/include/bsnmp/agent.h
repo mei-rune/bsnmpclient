@@ -70,8 +70,8 @@ typedef int (*snmp_depop_t)(struct snmp_context *, struct snmp_dependency *,
     enum snmp_depop);
 
 struct snmp_dependency {
-	struct asn_oid	obj;
-	struct asn_oid	idx;
+	asn_oid_t	obj;
+	asn_oid_t	idx;
 };
 
 /*
@@ -90,11 +90,11 @@ enum snmp_op {
 	SNMP_OP_ROLLBACK,
 };
 
-typedef int (*snmp_op_t)(struct snmp_context *, struct snmp_value *,
+typedef int (*snmp_op_t)(struct snmp_context *, snmp_value_t *,
     u_int, u_int, enum snmp_op);
 
 struct snmp_node {
-	struct asn_oid oid;
+	asn_oid_t oid;
 	const char	*name;		/* name of the leaf */
 	enum snmp_node_type type;	/* type of this node */
 	enum snmp_syntax syntax;
@@ -129,20 +129,20 @@ extern u_int snmp_trace;
 /* called to write the trace */
 extern void (*snmp_debug)(const char *fmt, ...);
 
-enum snmp_ret snmp_get(struct snmp_pdu *pdu, struct asn_buf *resp_b,
-    struct snmp_pdu *resp, void *);
-enum snmp_ret snmp_getnext(struct snmp_pdu *pdu, struct asn_buf *resp_b,
-    struct snmp_pdu *resp, void *);
-enum snmp_ret snmp_getbulk(struct snmp_pdu *pdu, struct asn_buf *resp_b,
-    struct snmp_pdu *resp, void *);
-enum snmp_ret snmp_set(struct snmp_pdu *pdu, struct asn_buf *resp_b,
-    struct snmp_pdu *resp, void *);
+enum snmp_ret snmp_get(snmp_pdu_t *pdu, asn_buf_t *resp_b,
+    snmp_pdu_t *resp, void *);
+enum snmp_ret snmp_getnext(snmp_pdu_t *pdu, asn_buf_t *resp_b,
+    snmp_pdu_t *resp, void *);
+enum snmp_ret snmp_getbulk(snmp_pdu_t *pdu, asn_buf_t *resp_b,
+    snmp_pdu_t *resp, void *);
+enum snmp_ret snmp_set(snmp_pdu_t *pdu, asn_buf_t *resp_b,
+    snmp_pdu_t *resp, void *);
 
-enum snmp_ret snmp_make_errresp(const struct snmp_pdu *, struct asn_buf *,
-    struct asn_buf *);
+enum snmp_ret snmp_make_errresp(const snmp_pdu_t *, asn_buf_t *,
+    asn_buf_t *);
 
 struct snmp_dependency *snmp_dep_lookup(struct snmp_context *,
-    const struct asn_oid *, const struct asn_oid *, size_t, snmp_depop_t);
+    const asn_oid_t *, const asn_oid_t *, size_t, snmp_depop_t);
 
 struct snmp_context *snmp_init_context(void);
 int snmp_dep_commit(struct snmp_context *);

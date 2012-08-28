@@ -59,10 +59,10 @@
 #ifndef HEADER_ENVELOPE_H
 #define HEADER_ENVELOPE_H
 
-#include "compat/openssl_aes.h"
-#include "compat/openssl_des.h"
-#include "compat/openssl_md5.h"
-#include "compat/openssl_sha.h"
+#include "openssl_aes.h"
+#include "openssl_des.h"
+#include "openssl_md5.h"
+#include "openssl_sha.h"
 
 /*
 #define EVP_RC2_KEY_SIZE		16
@@ -157,35 +157,14 @@ typedef struct
 
 #define EVP_PKEY_NULL_method	NULL,NULL,{0,0,0,0}
 
-//#ifndef OPENSSL_NO_DSA
-//#define EVP_PKEY_DSA_method	(evp_sign_method *)DSA_sign, \
-//				(evp_verify_method *)DSA_verify, \
-//				{EVP_PKEY_DSA,EVP_PKEY_DSA2,EVP_PKEY_DSA3, \
-//					EVP_PKEY_DSA4,0}
-//#else
+
 #define EVP_PKEY_DSA_method	EVP_PKEY_NULL_method
-//#endif
 
-//#ifndef OPENSSL_NO_ECDSA
-//#define EVP_PKEY_ECDSA_method   (evp_sign_method *)ECDSA_sign, \
-//				(evp_verify_method *)ECDSA_verify, \
-//                                 {EVP_PKEY_EC,0,0,0}
-//#else   
+
 #define EVP_PKEY_ECDSA_method   EVP_PKEY_NULL_method
-//#endif
 
-//#ifndef OPENSSL_NO_RSA
-//#define EVP_PKEY_RSA_method	(evp_sign_method *)RSA_sign, \
-//				(evp_verify_method *)RSA_verify, \
-//				{EVP_PKEY_RSA,EVP_PKEY_RSA2,0,0}
-//#define EVP_PKEY_RSA_ASN1_OCTET_STRING_method \
-//				(evp_sign_method *)RSA_sign_ASN1_OCTET_STRING, \
-//				(evp_verify_method *)RSA_verify_ASN1_OCTET_STRING, \
-//				{EVP_PKEY_RSA,EVP_PKEY_RSA2,0,0}
-//#else
 #define EVP_PKEY_RSA_method	EVP_PKEY_NULL_method
 #define EVP_PKEY_RSA_ASN1_OCTET_STRING_method EVP_PKEY_NULL_method
-//#endif
 
 
 struct env_md_ctx_st

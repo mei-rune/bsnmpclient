@@ -51,18 +51,18 @@
 #ifdef HAVE_OPENSSL
 #include <openssl/evp.h>
 #else
-#include "compat/openssl_evp.h"
-#include "compat/openssl_aes.h"
-#include "compat/openssl_des.h"
-#include "compat/openssl_md5.h"
-#include "compat/openssl_sha.h"
+#include "openssl/compat/openssl_evp.h"
+#include "openssl/compat/openssl_aes.h"
+#include "openssl/compat/openssl_des.h"
+#include "openssl/compat/openssl_md5.h"
+#include "openssl/compat/openssl_sha.h"
 #endif
 #endif
 
 #include "bsnmp/asn1.h"
 #include "bsnmp/snmp.h"
 #include "support.h"
-#include "snmppriv.h"
+#include "priv.h"
 
 #define	SNMP_PRIV_AES_IV_SIZ		16
 #define	SNMP_EXTENDED_KEY_SIZ		64
@@ -98,7 +98,7 @@ static int32_t snmp_digest_init(enum snmp_authentication auth_proto, EVP_MD_CTX 
 	return (1);
 }
 
-enum snmp_code snmp_pdu_calc_digest(const struct snmp_pdu *pdu, uint8_t *digest)
+enum snmp_code snmp_pdu_calc_digest(const snmp_pdu_t *pdu, uint8_t *digest)
 {
 	uint8_t md[EVP_MAX_MD_SIZE], extkey[SNMP_EXTENDED_KEY_SIZ];
 	uint8_t key1[SNMP_EXTENDED_KEY_SIZ], key2[SNMP_EXTENDED_KEY_SIZ];
@@ -149,7 +149,7 @@ failed:
 	return (SNMP_CODE_BADDIGEST);
 }
 
-static int32_t snmp_pdu_cipher_init(const struct snmp_pdu *pdu, int32_t len,
+static int32_t snmp_pdu_cipher_init(const snmp_pdu_t *pdu, int32_t len,
     const EVP_CIPHER **ctype, uint8_t *piv)
 {
 	int i;
@@ -181,7 +181,7 @@ static int32_t snmp_pdu_cipher_init(const struct snmp_pdu *pdu, int32_t len,
 	return (1);
 }
 
-enum snmp_code snmp_pdu_encrypt(const struct snmp_pdu *pdu)
+enum snmp_code snmp_pdu_encrypt(const snmp_pdu_t *pdu)
 {
 	int32_t err, olen;
 	uint8_t iv[SNMP_PRIV_AES_IV_SIZ];
@@ -208,7 +208,7 @@ enum snmp_code snmp_pdu_encrypt(const struct snmp_pdu *pdu)
 	return (SNMP_CODE_OK);
 }
 
-enum snmp_code snmp_pdu_decrypt(const struct snmp_pdu *pdu)
+enum snmp_code snmp_pdu_decrypt(const snmp_pdu_t *pdu)
 {
 	int32_t err, olen;
 	uint8_t iv[SNMP_PRIV_AES_IV_SIZ];
@@ -237,7 +237,7 @@ enum snmp_code snmp_pdu_decrypt(const struct snmp_pdu *pdu)
 }
 //
 ///* [RFC 3414] - A.2. Password to Key Algorithm */
-//enum snmp_code snmp_passwd_to_keys(struct snmp_user *user, char *passwd)
+//enum snmp_code snmp_passwd_to_keys(snmp_user_t *user, char *passwd)
 //{
 //	int err, loop, i, pwdlen;
 //	uint32_t  keylen, olen;
@@ -276,7 +276,7 @@ enum snmp_code snmp_pdu_decrypt(const struct snmp_pdu *pdu)
 //}
 //
 ///* [RFC 3414] - 2.6. Key Localization Algorithm */
-//enum snmp_code snmp_get_local_keys(struct snmp_user *user, uint8_t *eid, uint32_t elen)
+//enum snmp_code snmp_get_local_keys(snmp_user_t *user, uint8_t *eid, uint32_t elen)
 //{
 //	int err;
 //	uint32_t  keylen, olen;
@@ -390,33 +390,33 @@ static enum snmp_code snmp_passphrase_to_localization_keys(enum snmp_authenticat
 	return (SNMP_CODE_OK);
 }
 
-enum snmp_code snmp_set_auth_passphrase(struct snmp_user *user
+enum snmp_code snmp_set_auth_passphrase(snmp_user_t *user
 	                            , const char *passphrase, size_t passphrase_len)   {
 	user->auth_len = sizeof(user->auth_key);
 	return snmp_passphrase_to_keys(user->auth_proto, passphrase
 		, passphrase_len, user->auth_key, &user->auth_len);
 }
 
-enum snmp_code snmp_set_priv_passphrase(struct snmp_user *user
+enum snmp_code snmp_set_priv_passphrase(snmp_user_t *user
 	                            , const char *passphrase, size_t passphrase_len)   {
 	user->priv_len = sizeof(user->priv_key);
 	return snmp_passphrase_to_keys(user->auth_proto, passphrase
 		, passphrase_len, user->priv_key, &user->priv_len);
 }
 
-enum snmp_code snmp_auth_to_localization_keys(struct snmp_user *user
+enum snmp_code snmp_auth_to_localization_keys(snmp_user_t *user
 	                            , const uint8_t *eid, uint32_t elen)   {
 	return snmp_passphrase_to_localization_keys(user->auth_proto, eid
 		, elen, user->auth_key, &user->auth_len);
 }
 
-enum snmp_code snmp_priv_to_localization_keys(struct snmp_user *user
+enum snmp_code snmp_priv_to_localization_keys(snmp_user_t *user
 	                            , const uint8_t *eid, uint32_t elen)   {
 	return snmp_passphrase_to_localization_keys(user->auth_proto, eid
 		, elen, user->priv_key, &user->priv_len);
 }
 
-enum snmp_code snmp_calc_keychange(struct snmp_user *user, uint8_t *keychange)
+enum snmp_code snmp_calc_keychange(snmp_user_t *user, uint8_t *keychange)
 {
 	int32_t err, rvalue[SNMP_AUTH_HMACSHA_KEY_SIZ / 4];
 	uint32_t i, keylen, olen;
@@ -448,7 +448,7 @@ enum snmp_code snmp_calc_keychange(struct snmp_user *user, uint8_t *keychange)
 #else /* !HAVE_LIBCRYPTO */
 
 enum snmp_code
-snmp_pdu_calc_digest(const struct snmp_pdu *pdu, uint8_t *digest __unused)
+snmp_pdu_calc_digest(const snmp_pdu_t *pdu, uint8_t *digest __unused)
 {
 	if  (pdu->user.auth_proto != SNMP_AUTH_NOAUTH)
 		return (SNMP_CODE_BADSECLEVEL);
@@ -458,7 +458,7 @@ snmp_pdu_calc_digest(const struct snmp_pdu *pdu, uint8_t *digest __unused)
 }
 
 enum snmp_code
-snmp_pdu_encrypt(const struct snmp_pdu *pdu)
+snmp_pdu_encrypt(const snmp_pdu_t *pdu)
 {
 	if (pdu->user.priv_proto != SNMP_PRIV_NOPRIV)
 		return (SNMP_CODE_BADSECLEVEL);
@@ -467,7 +467,7 @@ snmp_pdu_encrypt(const struct snmp_pdu *pdu)
 }
 
 enum snmp_code
-snmp_pdu_decrypt(const struct snmp_pdu *pdu)
+snmp_pdu_decrypt(const snmp_pdu_t *pdu)
 {
 	if (pdu->user.priv_proto != SNMP_PRIV_NOPRIV)
 		return (SNMP_CODE_BADSECLEVEL);
@@ -476,7 +476,7 @@ snmp_pdu_decrypt(const struct snmp_pdu *pdu)
 }
 
 int
-snmp_passwd_to_keys(struct snmp_user *user, char *passwd __unused)
+snmp_passwd_to_keys(snmp_user_t *user, char *passwd __unused)
 {
 	if (user->auth_proto == SNMP_AUTH_NOAUTH &&
 	    user->priv_proto == SNMP_PRIV_NOPRIV)
@@ -488,7 +488,7 @@ snmp_passwd_to_keys(struct snmp_user *user, char *passwd __unused)
 }
 
 int
-snmp_get_local_keys(struct snmp_user *user, uint8_t *eid __unused,
+snmp_get_local_keys(snmp_user_t *user, uint8_t *eid __unused,
     uint32_t elen __unused)
 {
 	if (user->auth_proto == SNMP_AUTH_NOAUTH &&
@@ -500,7 +500,7 @@ snmp_get_local_keys(struct snmp_user *user, uint8_t *eid __unused,
 	return (SNMP_CODE_FAILED);
 }
 
-enum snmp_code snmp_set_auth_passphrase(struct snmp_user *user
+enum snmp_code snmp_set_auth_passphrase(snmp_user_t *user
 	                            , const char *passphrase, size_t passphrase_len)   {
 
 	if (user->auth_proto == SNMP_AUTH_NOAUTH &&
@@ -512,7 +512,7 @@ enum snmp_code snmp_set_auth_passphrase(struct snmp_user *user
 	return (SNMP_CODE_FAILED);
 }
 
-enum snmp_code snmp_set_priv_passphrase(struct snmp_user *user
+enum snmp_code snmp_set_priv_passphrase(snmp_user_t *user
 	                            , const char *passphrase, size_t passphrase_len)   {
 
 	if (user->auth_proto == SNMP_AUTH_NOAUTH &&
@@ -524,7 +524,7 @@ enum snmp_code snmp_set_priv_passphrase(struct snmp_user *user
 	return (SNMP_CODE_FAILED);
 }
 
-enum snmp_code snmp_auth_to_localization_keys(struct snmp_user *user
+enum snmp_code snmp_auth_to_localization_keys(snmp_user_t *user
 	                            , const uint8_t *eid, uint32_t elen)   {
 
 	if (user->auth_proto == SNMP_AUTH_NOAUTH &&
@@ -536,7 +536,7 @@ enum snmp_code snmp_auth_to_localization_keys(struct snmp_user *user
 	return (SNMP_CODE_FAILED);
 }
 
-enum snmp_code snmp_priv_to_localization_keys(struct snmp_user *user
+enum snmp_code snmp_priv_to_localization_keys(snmp_user_t *user
 	                            , const uint8_t *eid, uint32_t elen)   {
 
 	if (user->auth_proto == SNMP_AUTH_NOAUTH &&
@@ -548,7 +548,7 @@ enum snmp_code snmp_priv_to_localization_keys(struct snmp_user *user
 	return (SNMP_CODE_FAILED);
 }
 enum snmp_code
-snmp_calc_keychange(struct snmp_user *user __unused,
+snmp_calc_keychange(snmp_user_t *user __unused,
     uint8_t *keychange __unused)
 {
 	errno = EPROTONOSUPPORT;

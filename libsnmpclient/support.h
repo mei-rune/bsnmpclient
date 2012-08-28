@@ -36,23 +36,15 @@
 
 #include "bsnmp/config.h"
 #include <stdlib.h>
-
-
-#ifndef HAVE_ERR_H
-
-void errx(int code, const char *fmt, ...);
-void err(int code, const char *fmt, ...);
-
-void warnx(const char *fmt, ...);    
-void warn(const char *fmt, ...);
-
+#ifdef __GNUC__
+#include <sys/time.h>
 #endif
 
 #ifndef HAVE_STRLCPY
 
 size_t strlcpy(char *dst, const char *src, size_t len);
 
-#endif
+#endif	
 
 #ifndef HAVE_GETTIMEOFDAY
 /* No gettimeofday; this muse be windows. */

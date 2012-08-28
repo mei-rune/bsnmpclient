@@ -70,8 +70,6 @@
  * filespec := '"' STRING '"' | '<' STRING '>'
  */
 
-#include <sys/queue.h>
-
 #ifndef _WIN32
 #include <sys/param.h> 
 #include <sys/uio.h>
@@ -307,7 +305,7 @@ struct {
 	struct snmp_index_entry	*table_idx;
 } table_data;
 
-struct asn_oid current_oid;
+asn_oid_t current_oid;
 char nexttok[MAXSTR];
 u_long val;		/* integer values */
 int32_t	all_cond;	/* all conditions are true */
@@ -315,10 +313,10 @@ int32_t saved_token = -1;
 
 /* Prepare the global data before parsing a new file. */
 static void
-snmp_import_init(struct asn_oid *append)
+snmp_import_init(asn_oid_t *append)
 {
 	memset(&table_data, 0, sizeof(table_data));
-	memset(&current_oid, 0, sizeof(struct asn_oid));
+	memset(&current_oid, 0, sizeof(asn_oid_t));
 	memset(nexttok, 0, MAXSTR);
 
 	if (append != NULL)

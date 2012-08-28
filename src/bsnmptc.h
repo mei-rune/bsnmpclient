@@ -81,12 +81,12 @@ enum snmp_tc {
 };
 
 typedef uint8_t * (*snmp_oct2tc_f) (uint32_t len, uint8_t *octs, uint8_t *buf);
-typedef char * (*snmp_tc2oid_f) (char *str, struct asn_oid *oid);
-typedef int32_t (*snmp_tc2oct_f) (struct snmp_value *value, char *string);
+typedef char * (*snmp_tc2oid_f) (char *str, asn_oid_t *oid);
+typedef int32_t (*snmp_tc2oct_f) (snmp_value_t *value, char *string);
 
 enum snmp_tc snmp_get_tc(char *str);
 char *snmp_oct2tc(enum snmp_tc tc, uint32_t len, char *octets);
-char *snmp_tc2oid(enum snmp_tc tc, char *str, struct asn_oid *oid);
-int32_t snmp_tc2oct(enum snmp_tc tc, struct snmp_value *value, char *string);
+char *snmp_tc2oid(enum snmp_tc tc, char *str, asn_oid_t *oid);
+int32_t snmp_tc2oct(enum snmp_tc tc, snmp_value_t *value, char *string);
 
 #endif /* _BSNMP_TEXT_CONV_H_ */

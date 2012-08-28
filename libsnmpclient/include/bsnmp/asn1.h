@@ -44,13 +44,13 @@
 #include <string.h>
 
 
-struct asn_buf {
+typedef struct asn_buf {
 	union {
 		u_char	*ptr;
 		const u_char *cptr;
 	}	asn_u;
 	size_t	asn_len;
-};
+} asn_buf_t;
 #define asn_cptr	asn_u.cptr
 #define asn_ptr	asn_u.ptr
 
@@ -64,10 +64,10 @@ struct asn_buf {
 /* type of subidentifiers */
 typedef uint32_t asn_subid_t;
 
-struct asn_oid {
+typedef struct asn_oid {
 	u_int	len;
 	asn_subid_t subs[ASN_MAXOIDLEN];
-};
+} asn_oid_t;
 
 enum asn_err {
 	/* conversion was ok */
@@ -96,70 +96,70 @@ typedef uint32_t asn_len_t;	/* could be also uint16_t */
 /* maximum size of an octet string as per SMIv2 */
 #define ASN_MAXOCTETSTRING 65535
 
-extern void (*asn_error)(const struct asn_buf *, const char *, ...);
+extern void (*asn_error)(const asn_buf_t *, const char *, ...);
 
-enum asn_err asn_get_header(struct asn_buf *, u_char *, asn_len_t *);
-enum asn_err asn_put_header(struct asn_buf *, u_char, asn_len_t);
+enum asn_err asn_get_header(asn_buf_t *, u_char *, asn_len_t *);
+enum asn_err asn_put_header(asn_buf_t *, u_char, asn_len_t);
 
-enum asn_err asn_put_temp_header(struct asn_buf *, u_char, u_char **);
-enum asn_err asn_commit_header(struct asn_buf *, u_char *, size_t *);
+enum asn_err asn_put_temp_header(asn_buf_t *, u_char, u_char **);
+enum asn_err asn_commit_header(asn_buf_t *, u_char *, size_t *);
 
-enum asn_err asn_get_integer_raw(struct asn_buf *, asn_len_t, int32_t *);
-enum asn_err asn_get_integer(struct asn_buf *, int32_t *);
-enum asn_err asn_put_integer(struct asn_buf *, int32_t);
+enum asn_err asn_get_integer_raw(asn_buf_t *, asn_len_t, int32_t *);
+enum asn_err asn_get_integer(asn_buf_t *, int32_t *);
+enum asn_err asn_put_integer(asn_buf_t *, int32_t);
 
-enum asn_err asn_get_octetstring_raw(struct asn_buf *, asn_len_t, u_char *, u_int *);
-enum asn_err asn_get_octetstring(struct asn_buf *, u_char *, u_int *);
-enum asn_err asn_put_octetstring(struct asn_buf *, const u_char *, u_int);
+enum asn_err asn_get_octetstring_raw(asn_buf_t *, asn_len_t, u_char *, u_int *);
+enum asn_err asn_get_octetstring(asn_buf_t *, u_char *, u_int *);
+enum asn_err asn_put_octetstring(asn_buf_t *, const u_char *, u_int);
 
-enum asn_err asn_get_null_raw(struct asn_buf *b, asn_len_t);
-enum asn_err asn_get_null(struct asn_buf *);
-enum asn_err asn_put_null(struct asn_buf *);
+enum asn_err asn_get_null_raw(asn_buf_t *b, asn_len_t);
+enum asn_err asn_get_null(asn_buf_t *);
+enum asn_err asn_put_null(asn_buf_t *);
 
-enum asn_err asn_put_exception(struct asn_buf *, u_int);
+enum asn_err asn_put_exception(asn_buf_t *, u_int);
 
-enum asn_err asn_get_objid_raw(struct asn_buf *, asn_len_t, struct asn_oid *);
-enum asn_err asn_get_objid(struct asn_buf *, struct asn_oid *);
-enum asn_err asn_put_objid(struct asn_buf *, const struct asn_oid *);
+enum asn_err asn_get_objid_raw(asn_buf_t *, asn_len_t, asn_oid_t *);
+enum asn_err asn_get_objid(asn_buf_t *, asn_oid_t *);
+enum asn_err asn_put_objid(asn_buf_t *, const asn_oid_t *);
 
-enum asn_err asn_get_sequence(struct asn_buf *, asn_len_t *);
+enum asn_err asn_get_sequence(asn_buf_t *, asn_len_t *);
 
-enum asn_err asn_get_ipaddress_raw(struct asn_buf *, asn_len_t, u_char *);
-enum asn_err asn_get_ipaddress(struct asn_buf *, u_char *);
-enum asn_err asn_put_ipaddress(struct asn_buf *, const u_char *);
+enum asn_err asn_get_ipaddress_raw(asn_buf_t *, asn_len_t, u_char *);
+enum asn_err asn_get_ipaddress(asn_buf_t *, u_char *);
+enum asn_err asn_put_ipaddress(asn_buf_t *, const u_char *);
 
-enum asn_err asn_get_uint32_raw(struct asn_buf *, asn_len_t, uint32_t *);
-enum asn_err asn_put_uint32(struct asn_buf *, u_char, uint32_t);
+enum asn_err asn_get_uint32_raw(asn_buf_t *, asn_len_t, uint32_t *);
+enum asn_err asn_put_uint32(asn_buf_t *, u_char, uint32_t);
 
-enum asn_err asn_get_counter64_raw(struct asn_buf *, asn_len_t, uint64_t *);
-enum asn_err asn_put_counter64(struct asn_buf *, uint64_t);
+enum asn_err asn_get_counter64_raw(asn_buf_t *, asn_len_t, uint64_t *);
+enum asn_err asn_put_counter64(asn_buf_t *, uint64_t);
 
-enum asn_err asn_get_timeticks(struct asn_buf *, uint32_t *);
-enum asn_err asn_put_timeticks(struct asn_buf *, uint32_t);
+enum asn_err asn_get_timeticks(asn_buf_t *, uint32_t *);
+enum asn_err asn_put_timeticks(asn_buf_t *, uint32_t);
 
-enum asn_err asn_skip(struct asn_buf *, asn_len_t);
-enum asn_err asn_pad(struct asn_buf *, asn_len_t);
+enum asn_err asn_skip(asn_buf_t *, asn_len_t);
+enum asn_err asn_pad(asn_buf_t *, asn_len_t);
 
 /*
  * Utility functions for OIDs
  */
 /* get a sub-OID from the middle of another OID */
-void asn_slice_oid(struct asn_oid *, const struct asn_oid *, u_int, u_int);
+void asn_slice_oid(asn_oid_t *, const asn_oid_t *, u_int, u_int);
 
 /* append an OID to another one */
-void asn_append_oid(struct asn_oid *, const struct asn_oid *);
+void asn_append_oid(asn_oid_t *, const asn_oid_t *);
 
 /* compare two OIDs */
-int asn_compare_oid(const struct asn_oid *, const struct asn_oid *);
+int asn_compare_oid(const asn_oid_t *, const asn_oid_t *);
 
 /* check whether the first is a suboid of the second one */
-int asn_is_suboid(const struct asn_oid *, const struct asn_oid *);
+int asn_is_suboid(const asn_oid_t *, const asn_oid_t *);
 
 /* format an OID into a user buffer of size ASN_OIDSTRLEN */
-char *asn_oid2str_r(const struct asn_oid *, char *);
+char *asn_oid2str_r(const asn_oid_t *, char *);
 
 /* format an OID into a private static buffer */
-char *asn_oid2str(const struct asn_oid *);
+char *asn_oid2str(const asn_oid_t *);
 
 enum {
 	ASN_TYPE_BOOLEAN	= 0x01,

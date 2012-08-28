@@ -40,58 +40,6 @@
 
 #include "support.h"
 
-#ifndef HAVE_ERR_H
-
-void warnx(const char *fmt, ...)
-{
-	va_list ap;
-
-	va_start(ap, fmt);
-	fprintf(stderr, "warning: ");
-	vfprintf(stderr, fmt, ap);
-	fprintf(stderr, "\n");
-	va_end(ap);
-}
-
-void warn(const char *fmt, ...)
-{
-	va_list ap;
-	int e = errno;
-
-	va_start(ap, fmt);
-	fprintf(stderr, "warning: ");
-	vfprintf(stderr, fmt, ap);
-	fprintf(stderr, ": %s\n", strerror(e));
-	va_end(ap);
-}
-
-void errx(int code, const char *fmt, ...)
-{
-	va_list ap;
-
-	va_start(ap, fmt);
-	fprintf(stderr, "error: ");
-	vfprintf(stderr, fmt, ap);
-	fprintf(stderr, "\n");
-	va_end(ap);
-	exit(code);
-}
-
-void err(int code, const char *fmt, ...)
-{
-	va_list ap;
-	int e = errno;
-
-	va_start(ap, fmt);
-	fprintf(stderr, "error: ");
-	vfprintf(stderr, fmt, ap);
-	fprintf(stderr, ": %s\n", strerror(e));
-	va_end(ap);
-	exit(code);
-}
-
-#endif
-
 #ifndef HAVE_STRLCPY
 
 size_t strlcpy(char *dst, const char *src, size_t len)
@@ -117,7 +65,6 @@ int socket_set_blocking(socket_t fd, int blocking)
 	{
 		u_long nonblocking = (0 == blocking)?1:0;
 		if (ioctlsocket(fd, FIONBIO, &nonblocking) == SOCKET_ERROR) {
-			warn("fcntl(%d, F_GETFL)", (int)fd);
 			return -1;
 		}
 	}
@@ -125,14 +72,12 @@ int socket_set_blocking(socket_t fd, int blocking)
 	{
 		int flags;
 		if ((flags = fcntl(fd, F_GETFL, NULL)) < 0) {
-			warn("fcntl(%d, F_GETFL)", fd);
 			return -1;
 		}
         
         flags = (0 == blocking)?(flags | O_NONBLOCK): (flags & ~O_NONBLOCK);
 
 		if (fcntl(fd, F_SETFL, flags) == -1) {
-			warn("fcntl(%d, F_SETFL)", fd);
 			return -1;
 		}
 	}

@@ -31,7 +31,6 @@
 
 #include "bsnmp/config.h"
 
-#include <sys/queue.h>
 
 #ifndef _WIN32
 #include <sys/param.h> 
@@ -57,42 +56,42 @@
 
 /* OctetString, DisplayString */
 static uint8_t *snmp_oct2str(uint32_t, uint8_t *, uint8_t *);
-static char *snmp_str2asn_oid(char *, struct asn_oid *);
-static int parse_octetstring(struct snmp_value *, char *);
+static char *snmp_str2asn_oid(char *, asn_oid_t *);
+static int parse_octetstring(snmp_value_t *, char *);
 
 /* DateAndTime */
 static uint8_t *snmp_octstr2date(uint32_t, uint8_t *, uint8_t *);
-static char *snmp_date2asn_oid(char * , struct asn_oid *);
-static int parse_dateandtime(struct snmp_value *, char *);
+static char *snmp_date2asn_oid(char * , asn_oid_t *);
+static int parse_dateandtime(snmp_value_t *, char *);
 
 /* PhysAddress */
 static uint8_t *snmp_oct2physAddr(uint32_t, uint8_t *, uint8_t *);
-static char *snmp_addr2asn_oid(char *, struct asn_oid *);
-static int parse_physaddress(struct snmp_value *, char *);
+static char *snmp_addr2asn_oid(char *, asn_oid_t *);
+static int parse_physaddress(snmp_value_t *, char *);
 
 /* NTPTimeStamp */
 static uint8_t *snmp_oct2ntp_ts(uint32_t, uint8_t *, uint8_t *);
-static char *snmp_ntp_ts2asn_oid(char *, struct asn_oid *);
-static int parse_ntp_ts(struct snmp_value *, char *);
+static char *snmp_ntp_ts2asn_oid(char *, asn_oid_t *);
+static int parse_ntp_ts(snmp_value_t *, char *);
 
 /* BridgeId */
 static uint8_t *snmp_oct2bridgeid(uint32_t, uint8_t *, uint8_t *);
-static char *snmp_bridgeid2oct(char *, struct asn_oid *);
-static int parse_bridge_id(struct snmp_value *, char *);
+static char *snmp_bridgeid2oct(char *, asn_oid_t *);
+static int parse_bridge_id(snmp_value_t *, char *);
 
 /* BridgePortId */
 static uint8_t *snmp_oct2bport_id(uint32_t, uint8_t *, uint8_t *);
-static char *snmp_bport_id2oct(char *, struct asn_oid *);
-static int parse_bport_id(struct snmp_value *, char *);
+static char *snmp_bport_id2oct(char *, asn_oid_t *);
+static int parse_bport_id(snmp_value_t *, char *);
 
 /* InetAddress */
 static uint8_t *snmp_oct2inetaddr(uint32_t len, uint8_t *octets, uint8_t *buf);
-static char *snmp_inetaddr2oct(char *str, struct asn_oid *oid);
-static int32_t parse_inetaddr(struct snmp_value *value, char *string);
+static char *snmp_inetaddr2oct(char *str, asn_oid_t *oid);
+static int32_t parse_inetaddr(snmp_value_t *value, char *string);
 
 static uint8_t *snmp_oct2bits(uint32_t len, uint8_t *octets, uint8_t *buf);
-static char *snmp_bits2oct(char *str, struct asn_oid *oid);
-static int32_t parse_bits(struct snmp_value *value, char *string);
+static char *snmp_bits2oct(char *str, asn_oid_t *oid);
+static int32_t parse_bits(snmp_value_t *value, char *string);
 
 struct snmp_text_conv {
 	enum snmp_tc	tc;
@@ -181,7 +180,7 @@ snmp_oct2tc(enum snmp_tc tc, uint32_t len, char *octets)
 }
 
 char *
-snmp_tc2oid(enum snmp_tc tc, char *str, struct asn_oid *oid)
+snmp_tc2oid(enum snmp_tc tc, char *str, asn_oid_t *oid)
 {
 	if (tc < 0 || tc > SNMP_UNKNOWN)
 		tc = SNMP_UNKNOWN;
@@ -190,7 +189,7 @@ snmp_tc2oid(enum snmp_tc tc, char *str, struct asn_oid *oid)
 }
 
 int32_t
-snmp_tc2oct(enum snmp_tc tc, struct snmp_value *value, char *string)
+snmp_tc2oct(enum snmp_tc tc, snmp_value_t *value, char *string)
 {
 	if (tc < 0 || tc > SNMP_UNKNOWN)
 		tc = SNMP_UNKNOWN;
@@ -220,7 +219,7 @@ snmp_oct2str(uint32_t len, uint8_t *octets, uint8_t *buf)
 }
 
 static char *
-snmp_str2asn_oid(char *str, struct asn_oid *oid)
+snmp_str2asn_oid(char *str, asn_oid_t *oid)
 {
 	uint32_t i, len = 0;
 
@@ -248,7 +247,7 @@ snmp_str2asn_oid(char *str, struct asn_oid *oid)
 }
 
 static int32_t
-parse_octetstring(struct snmp_value *value, char *val)
+parse_octetstring(snmp_value_t *value, char *val)
 {
 	size_t len;
 
@@ -326,7 +325,7 @@ snmp_octstr2date(uint32_t len, uint8_t *octets, uint8_t *buf)
 }
 
 static char *
-snmp_date2asn_oid(char *str, struct asn_oid *oid)
+snmp_date2asn_oid(char *str, asn_oid_t *oid)
 {
 	char *endptr, *ptr;
 	uint32_t v;
@@ -476,7 +475,7 @@ snmp_date2asn_oid(char *str, struct asn_oid *oid)
 
 /* Read a DateAndTime string eg. 1992-5-26,13:30:15.0,-4:0. */
 static int32_t
-parse_dateandtime(struct snmp_value *sv, char *val)
+parse_dateandtime(snmp_value_t *sv, char *val)
 {
 	char *endptr;
 	uint32_t v;
@@ -589,7 +588,7 @@ snmp_oct2physAddr(uint32_t len, uint8_t *octets, uint8_t *buf)
 }
 
 static char *
-snmp_addr2asn_oid(char *str, struct asn_oid *oid)
+snmp_addr2asn_oid(char *str, asn_oid_t *oid)
 {
 	char *endptr, *ptr;
 	uint32_t v, i;
@@ -631,7 +630,7 @@ snmp_addr2asn_oid(char *str, struct asn_oid *oid)
 }
 
 static int32_t
-parse_physaddress(struct snmp_value *sv, char *val)
+parse_physaddress(snmp_value_t *sv, char *val)
 {
 	char *endptr;
 	int32_t i;
@@ -702,11 +701,11 @@ snmp_oct2ntp_ts(uint32_t len, uint8_t *octets, uint8_t *buf)
 }
 
 static char *
-snmp_ntp_ts2asn_oid(char *str, struct asn_oid *oid)
+snmp_ntp_ts2asn_oid(char *str, asn_oid_t *oid)
 {
 	char *endptr, *ptr;
 	uint32_t v, i, d;
-	struct asn_oid suboid;
+	asn_oid_t suboid;
 	int saved_errno;
 
 	if (snmp_suboid_append(oid, (asn_subid_t) SNMP_NTP_TS_OCTETS) < 0)
@@ -727,7 +726,7 @@ snmp_ntp_ts2asn_oid(char *str, struct asn_oid *oid)
 		return (NULL);
 	}
 
-	memset(&suboid, 0, sizeof(struct asn_oid));
+	memset(&suboid, 0, sizeof(asn_oid_t));
 	suboid.len = SNMP_NTP_TS_OCTETS;
 
 	for (i = 0, d = 1000; i < 4; i++) {
@@ -757,7 +756,7 @@ snmp_ntp_ts2asn_oid(char *str, struct asn_oid *oid)
 }
 
 static int32_t
-parse_ntp_ts(struct snmp_value *sv, char *val)
+parse_ntp_ts(snmp_value_t *sv, char *val)
 {
 	char *endptr;
 	int32_t i, d, saved_errno;
@@ -855,7 +854,7 @@ snmp_oct2bridgeid(uint32_t len, uint8_t *octets, uint8_t *buf)
 }
 
 static char *
-snmp_bridgeid2oct(char *str, struct asn_oid *oid)
+snmp_bridgeid2oct(char *str, asn_oid_t *oid)
 {
 	char *endptr, *ptr;
 	uint32_t v, i;
@@ -915,7 +914,7 @@ snmp_bridgeid2oct(char *str, struct asn_oid *oid)
 }
 
 static int32_t
-parse_bridge_id(struct snmp_value *sv, char *string)
+parse_bridge_id(snmp_value_t *sv, char *string)
 {
 	char *ptr, *endptr;
 	int32_t i, saved_errno;
@@ -1002,7 +1001,7 @@ snmp_oct2bport_id(uint32_t len, uint8_t *octets, uint8_t *buf)
 }
 
 static char *
-snmp_bport_id2oct(char *str, struct asn_oid *oid)
+snmp_bport_id2oct(char *str, asn_oid_t *oid)
 {
 	char *endptr, *ptr;
 	uint32_t v;
@@ -1042,7 +1041,7 @@ snmp_bport_id2oct(char *str, struct asn_oid *oid)
 }
 
 static int32_t
-parse_bport_id(struct snmp_value *value, char *string)
+parse_bport_id(snmp_value_t *value, char *string)
 {
 	char *ptr, *endptr;
 	int saved_errno;
@@ -1161,13 +1160,13 @@ snmp_oct2inetaddr(uint32_t len, uint8_t *octets, uint8_t *buf)
 }
 
 static char *
-snmp_inetaddr2oct(char *str, struct asn_oid *oid)
+snmp_inetaddr2oct(char *str, asn_oid_t *oid)
 {
 	return (NULL);
 }
 
 static int32_t
-parse_inetaddr(struct snmp_value *value, char *string)
+parse_inetaddr(snmp_value_t *value, char *string)
 {
 	return (-1);
 }
@@ -1194,7 +1193,7 @@ snmp_oct2bits(uint32_t len, uint8_t *octets, uint8_t *buf)
 }
 
 static char *
-snmp_bits2oct(char *str, struct asn_oid *oid)
+snmp_bits2oct(char *str, asn_oid_t *oid)
 {
 	char *endptr;
 	int i, size, bits, saved_errno;
@@ -1233,7 +1232,7 @@ snmp_bits2oct(char *str, struct asn_oid *oid)
 }
 
 static int32_t
-parse_bits(struct snmp_value *value, char *string)
+parse_bits(snmp_value_t *value, char *string)
 {
 	char *endptr;
 	int i, size, bits, saved_errno;
