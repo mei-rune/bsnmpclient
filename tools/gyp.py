@@ -26,11 +26,11 @@ if __name__ == '__main__':
   # On msvs it will crash if it gets an absolute path.
   # On Mac/make it will crash if it doesn't get an absolute path.
   if sys.platform == 'win32':
-    args.append(os.path.normpath(os.path.join(script_dir, '../bsnmptools.gyp')))
+    args.append(os.path.normpath(os.path.join(script_dir, '../snmpclient.gyp')))
     common_fn  = os.path.normpath(os.path.join(script_dir, '../common.gypi'))
     options_fn = os.path.normpath(os.path.join(script_dir, '../options.gypi'))
   else:
-    args.append(os.path.normpath(os.path.join(os.path.abspath(script_dir), '../bsnmptools.gyp')))
+    args.append(os.path.normpath(os.path.join(os.path.abspath(script_dir), '../snmpclient.gyp')))
     common_fn  = os.path.normpath(os.path.join(os.path.abspath(script_dir), '../common.gypi'))
     options_fn = os.path.normpath(os.path.join(os.path.abspath(script_dir), '../options.gypi'))
 

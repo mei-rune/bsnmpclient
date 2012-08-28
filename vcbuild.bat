@@ -58,7 +58,7 @@ if defined noprojgen goto msbuild
 @rem Generate the VS project.
 cmd /c "python tools\gyp.py -f msvs -G msvs_version=2010"
 if errorlevel 1 goto create-msvs-files-failed
-if not exist bsnmptools.sln goto create-msvs-files-failed
+if not exist snmpclient.sln goto create-msvs-files-failed
 echo Project files generated.
 
 :msbuild
@@ -79,7 +79,7 @@ goto run
 
 :msbuild-found
 @rem Build the sln with msbuild.
-msbuild bsnmptools.sln
+msbuild snmpclient.sln
 if errorlevel 1 goto exit
 
 :msi

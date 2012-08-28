@@ -33,7 +33,10 @@
 #define _BSNMP_SNMPCLIENT_H
 
 #include <sys/types.h>
-#ifndef _WIN32
+#ifdef _WIN32
+#include "compat/sys/queue.h"
+#else
+#include <sys/queue.h>
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <netinet/in.h>
@@ -72,6 +75,19 @@ typedef void *(*snmp_timeout_start_f)(struct timeval *timeout, snmp_timeout_cb_f
 
 /* timeout stop function */
 typedef void (*snmp_timeout_stop_f)(void *);
+
+/* List of all outstanding requests */
+struct sent_pdu {	
+    int		reqid;
+    snmp_pdu_t	*pdu;
+    struct timeval	time;
+    u_int		retrycount;
+    snmp_send_cb_f	callback;
+    void		*arg;
+    void		*timeout_id;
+    LIST_ENTRY(sent_pdu) entries;
+};
+LIST_HEAD(sent_pdu_list, sent_pdu);
 
 /*
  * Client context.
@@ -116,6 +132,8 @@ struct snmp_client {
 
 	snmp_timeout_start_f	timeout_start;
 	snmp_timeout_stop_f	timeout_stop;
+
+    struct sent_pdu_list sent_pdus;
 
 	char			local_path[sizeof(SNMP_LOCAL_PATH)];
 };

@@ -34,10 +34,6 @@
 #define __func__ __FUNCTION__
 #endif
 
-#ifndef ETIMEDOUT
-#define ETIMEDOUT WSAETIMEDOUT
-#endif
-
 #ifndef __unused
 #define __unused
 #endif

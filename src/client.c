@@ -73,21 +73,9 @@
 #include "support.h"
 #include "priv.h"
 
-
-/* List of all outstanding requests */
-struct sent_pdu {	
-    int		reqid;
-    snmp_pdu_t	*pdu;
-    struct timeval	time;
-    u_int		retrycount;
-    snmp_send_cb_f	callback;
-    void		*arg;
-    void		*timeout_id;
-    LIST_ENTRY(sent_pdu) entries;
-};
-LIST_HEAD(sent_pdu_list, sent_pdu);
-
-static struct sent_pdu_list sent_pdus;
+#ifndef ETIMEDOUT
+#define ETIMEDOUT WSAETIMEDOUT
+#endif
 
 /*
 * Prototype table entry. All C-structure produced by the table function must
@@ -1084,7 +1072,7 @@ int snmp_open(struct snmp_client *client, const char *host, const char *port, co
     }
 
     /* initialize list */
-    LIST_INIT(&sent_pdus);
+    LIST_INIT(&client->sent_pdus);
 
     return (0);
 }
@@ -1113,8 +1101,8 @@ void snmp_close(struct snmp_client *client)
         if (client->local_path[0] != '\0')
             (void)remove(client->local_path);
     }
-    while(!LIST_EMPTY(&sent_pdus)){
-        p1 = LIST_FIRST(&sent_pdus);
+    while(!LIST_EMPTY(&client->sent_pdus)){
+        p1 = LIST_FIRST(&client->sent_pdus);
         if (p1->timeout_id != NULL)
             client->timeout_stop(p1->timeout_id);
         LIST_REMOVE(p1, entries);
@@ -1310,7 +1298,7 @@ int32_t snmp_pdu_send(struct snmp_client *client, snmp_pdu_t *pdu, snmp_send_cb_
         client->timeout_start(&client->timeout, snmp_timeout,
         listentry);
 
-    LIST_INSERT_HEAD(&sent_pdus, listentry, entries);
+    LIST_INSERT_HEAD(&client->sent_pdus, listentry, entries);
 
     return (id);
 }
@@ -1460,7 +1448,7 @@ static int snmp_deliver_packet(struct snmp_client* client, snmp_pdu_t * resp)
         return (-1);
     }
 
-    LIST_FOREACH(listentry, &sent_pdus, entries)
+    LIST_FOREACH(listentry, &client->sent_pdus, entries)
         if (listentry->reqid == resp->request_id)
             break;
     if (listentry == NULL)
