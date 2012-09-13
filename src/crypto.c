@@ -482,8 +482,6 @@ snmp_passwd_to_keys(snmp_user_t *user, char *passwd __unused)
 	    user->priv_proto == SNMP_PRIV_NOPRIV)
 		return (SNMP_CODE_OK);
 
-	errno = EPROTONOSUPPORT;
-
 	return (SNMP_CODE_FAILED);
 }
 
@@ -495,8 +493,6 @@ snmp_get_local_keys(snmp_user_t *user, uint8_t *eid __unused,
 	    user->priv_proto == SNMP_PRIV_NOPRIV)
 		return (SNMP_CODE_OK);
 
-	errno = EPROTONOSUPPORT;
-
 	return (SNMP_CODE_FAILED);
 }
 
@@ -506,8 +502,6 @@ enum snmp_code snmp_set_auth_passphrase(snmp_user_t *user
 	if (user->auth_proto == SNMP_AUTH_NOAUTH &&
 	    user->priv_proto == SNMP_PRIV_NOPRIV)
 		return (SNMP_CODE_OK);
-
-	errno = EPROTONOSUPPORT;
 
 	return (SNMP_CODE_FAILED);
 }
@@ -519,8 +513,6 @@ enum snmp_code snmp_set_priv_passphrase(snmp_user_t *user
 	    user->priv_proto == SNMP_PRIV_NOPRIV)
 		return (SNMP_CODE_OK);
 
-	errno = EPROTONOSUPPORT;
-
 	return (SNMP_CODE_FAILED);
 }
 
@@ -530,8 +522,6 @@ enum snmp_code snmp_auth_to_localization_keys(snmp_user_t *user
 	if (user->auth_proto == SNMP_AUTH_NOAUTH &&
 	    user->priv_proto == SNMP_PRIV_NOPRIV)
 		return (SNMP_CODE_OK);
-
-	errno = EPROTONOSUPPORT;
 
 	return (SNMP_CODE_FAILED);
 }
@@ -543,7 +533,6 @@ enum snmp_code snmp_priv_to_localization_keys(snmp_user_t *user
 	    user->priv_proto == SNMP_PRIV_NOPRIV)
 		return (SNMP_CODE_OK);
 
-	errno = EPROTONOSUPPORT;
 
 	return (SNMP_CODE_FAILED);
 }
@@ -551,7 +540,6 @@ enum snmp_code
 snmp_calc_keychange(snmp_user_t *user __unused,
     uint8_t *keychange __unused)
 {
-	errno = EPROTONOSUPPORT;
 	return (SNMP_CODE_FAILED);
 }
 

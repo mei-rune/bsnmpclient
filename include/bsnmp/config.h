@@ -53,6 +53,6 @@
 #ifdef __GNUC__
 #define HAVE_GETTIMEOFDAY    1
 #endif
-#define HAVE_LIBCRYPTO 1
+//#define HAVE_LIBCRYPTO 1
 
 #endif

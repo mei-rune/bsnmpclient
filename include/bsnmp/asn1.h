@@ -43,16 +43,17 @@
 #include <sys/types.h>
 #include <string.h>
 
+typedef union asn_u_s {
+ 	u_char	*ptr;
+ 	const u_char *cptr;
+} asn_u_t;
 
 typedef struct asn_buf {
-	union {
-		u_char	*ptr;
-		const u_char *cptr;
-	}	asn_u;
-	size_t	asn_len;
+	asn_u_t	asn_u;
+	size_t 	asn_len;
 } asn_buf_t;
 #define asn_cptr	asn_u.cptr
-#define asn_ptr	asn_u.ptr
+#define asn_ptr 	asn_u.ptr
 
 /* these restrictions are in the SMI */
 #define ASN_MAXID	0xffffffff

@@ -257,7 +257,7 @@ static enum asn_err get_var_binding(asn_buf_t *b, snmp_value_t *binding)
 */
 enum asn_err snmp_parse_pdus_hdr(asn_buf_t *b, snmp_pdu_t *pdu, asn_len_t *lenp)
 {
-    if (pdu->type == SNMP_PDU_TRAP) {
+    if (pdu->pdu_type == SNMP_PDU_TRAP) {
         if (asn_get_objid(b, &pdu->enterprise) != ASN_ERR_OK) {
             snmp_error("cannot parse trap enterprise");
             return (ASN_ERR_FAILED);
@@ -637,9 +637,9 @@ enum snmp_code snmp_pdu_decode_scoped(asn_buf_t *b, snmp_pdu_t *pdu, int32_t *ip
             snmp_error("bad pdu header tag");
             return (SNMP_CODE_FAILED);
     }
-    pdu->type = type & ASN_TYPE_MASK;
+    pdu->pdu_type = type & ASN_TYPE_MASK;
 
-    switch (pdu->type) {
+    switch (pdu->pdu_type) {
 
     case SNMP_PDU_GET:
     case SNMP_PDU_GETNEXT:
@@ -649,7 +649,7 @@ enum snmp_code snmp_pdu_decode_scoped(asn_buf_t *b, snmp_pdu_t *pdu, int32_t *ip
 
     case SNMP_PDU_TRAP:
         if (pdu->version != SNMP_V1) {
-            snmp_error("bad pdu type %u", pdu->type);
+            snmp_error("bad pdu type %u", pdu->pdu_type);
             return (SNMP_CODE_FAILED);
         }
         break;
@@ -659,13 +659,13 @@ enum snmp_code snmp_pdu_decode_scoped(asn_buf_t *b, snmp_pdu_t *pdu, int32_t *ip
     case SNMP_PDU_TRAP2:
     case SNMP_PDU_REPORT:
         if (pdu->version == SNMP_V1) {
-            snmp_error("bad pdu type %u", pdu->type);
+            snmp_error("bad pdu type %u", pdu->pdu_type);
             return (SNMP_CODE_FAILED);
         }
         break;
 
     default:
-        snmp_error("bad pdu type %u", pdu->type);
+        snmp_error("bad pdu type %u", pdu->pdu_type);
         return (SNMP_CODE_FAILED);
     }
 
@@ -813,10 +813,10 @@ enum snmp_code snmp_pdu_encode_header(asn_buf_t *b, snmp_pdu_t *pdu)
         if (asn_put_integer(b, pdu->engine.max_msg_size) != ASN_ERR_OK)
             return (SNMP_CODE_FAILED);
 
-        if (pdu->type != SNMP_PDU_RESPONSE &&
-            pdu->type != SNMP_PDU_TRAP &&
-            pdu->type != SNMP_PDU_TRAP2 &&
-            pdu->type != SNMP_PDU_REPORT)
+        if (pdu->pdu_type != SNMP_PDU_RESPONSE &&
+            pdu->pdu_type != SNMP_PDU_TRAP &&
+            pdu->pdu_type != SNMP_PDU_TRAP2 &&
+            pdu->pdu_type != SNMP_PDU_REPORT)
             pdu->flags |= SNMP_MSG_REPORT_FLAG;
 
         if (asn_put_octetstring(b, (u_char *)&pdu->flags, 1)
@@ -854,10 +854,10 @@ enum snmp_code snmp_pdu_encode_header(asn_buf_t *b, snmp_pdu_t *pdu)
     }
 
     if (asn_put_temp_header(b, (ASN_TYPE_CONSTRUCTED | ASN_CLASS_CONTEXT |
-        pdu->type), &pdu->pdu_ptr) != ASN_ERR_OK)
+        pdu->pdu_type), &pdu->pdu_ptr) != ASN_ERR_OK)
         return (SNMP_CODE_FAILED);
 
-    if (pdu->type == SNMP_PDU_TRAP) {
+    if (pdu->pdu_type == SNMP_PDU_TRAP) {
         if (pdu->version != SNMP_V1 ||
             asn_put_objid(b, &pdu->enterprise) != ASN_ERR_OK ||
             asn_put_ipaddress(b, pdu->agent_addr) != ASN_ERR_OK ||
@@ -866,10 +866,10 @@ enum snmp_code snmp_pdu_encode_header(asn_buf_t *b, snmp_pdu_t *pdu)
             asn_put_timeticks(b, pdu->time_stamp) != ASN_ERR_OK)
             return (SNMP_CODE_FAILED);
     } else {
-        if (pdu->version == SNMP_V1 && (pdu->type == SNMP_PDU_GETBULK ||
-            pdu->type == SNMP_PDU_INFORM ||
-            pdu->type == SNMP_PDU_TRAP2 ||
-            pdu->type == SNMP_PDU_REPORT))
+        if (pdu->version == SNMP_V1 && (pdu->pdu_type == SNMP_PDU_GETBULK ||
+            pdu->pdu_type == SNMP_PDU_INFORM ||
+            pdu->pdu_type == SNMP_PDU_TRAP2 ||
+            pdu->pdu_type == SNMP_PDU_REPORT))
             return (SNMP_CODE_FAILED);
 
         if (asn_put_integer(b, pdu->request_id) != ASN_ERR_OK ||
@@ -1160,9 +1160,9 @@ void snmp_pdu_dump(const snmp_pdu_t *pdu)
     else
         vers = "v?";
 
-    switch (pdu->type) {
+    switch (pdu->pdu_type) {
     case SNMP_PDU_TRAP:
-        snmp_printf("%s %s '%s'", types[pdu->type], vers, pdu->community);
+        snmp_printf("%s %s '%s'", types[pdu->pdu_type], vers, pdu->community);
         snmp_printf(" enterprise=%s", asn_oid2str_r(&pdu->enterprise, buf));
         snmp_printf(" agent_addr=%u.%u.%u.%u", pdu->agent_addr[0],
             pdu->agent_addr[1], pdu->agent_addr[2], pdu->agent_addr[3]);
@@ -1180,14 +1180,19 @@ void snmp_pdu_dump(const snmp_pdu_t *pdu)
     case SNMP_PDU_INFORM:
     case SNMP_PDU_TRAP2:
     case SNMP_PDU_REPORT:
-        snmp_printf("%s %s '%s'", types[pdu->type], vers, pdu->community);
+        snmp_printf("%s %s '%s'", types[pdu->pdu_type], vers, pdu->community);
         dump_notrap(pdu);
         break;
 
     default:
-        snmp_printf("bad pdu type %u\n", pdu->type);
+        snmp_printf("bad pdu pdu_type %u\n", pdu->pdu_type);
         break;
     }
+}
+
+void snmp_pdu_init(snmp_pdu_t *pdu)
+{
+    memset(pdu, 0, sizeof(*pdu));
 }
 
 void snmp_value_free(snmp_value_t *value)
@@ -1645,12 +1650,12 @@ enum snmp_code snmp_pdu_check(const snmp_pdu_t *resp, const snmp_pdu_t *req)
         return (enum snmp_code)(SNMP_CODE_ERR_NOERROR + resp->error_status);
     }
 
-    if (resp->nbindings != req->nbindings && req->type != SNMP_PDU_GETBULK){
+    if (resp->nbindings != req->nbindings && req->pdu_type != SNMP_PDU_GETBULK){
 		snmp_error(snmp_get_error(SNMP_CODE_BADBINDINGNUMBER));
         return (SNMP_CODE_BADBINDINGNUMBER);
     }
 
-    switch (req->type) {
+    switch (req->pdu_type) {
     case SNMP_PDU_GET:
         ret = (snmp_check_get_resp(resp,req));
 		break;

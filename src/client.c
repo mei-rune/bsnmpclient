@@ -40,9 +40,11 @@
 #include "compat/sys/queue.h"
 #else
 #include <sys/queue.h>
-#include <sys/time.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#endif
+#ifdef __GNUC__
+#include <sys/time.h>
 #endif
 #include <stdio.h>
 #include <stdlib.h>
@@ -1126,7 +1128,7 @@ void snmp_pdu_create(struct snmp_client *client, snmp_pdu_t *pdu, u_int op)
         strlcpy(pdu->community, client->read_community,
         sizeof(pdu->community));
 
-    pdu->type = op;
+    pdu->pdu_type = op;
     pdu->version = client->version;
     pdu->error_status = 0;
     pdu->error_index = 0;
@@ -1443,8 +1445,8 @@ static int snmp_deliver_packet(struct snmp_client* client, snmp_pdu_t * resp)
 {
     struct sent_pdu *listentry;
 
-    if (resp->type != SNMP_PDU_RESPONSE) {
-        snmp_printf("ignoring snmp pdu %u", resp->type);
+    if (resp->pdu_type != SNMP_PDU_RESPONSE) {
+        snmp_printf("ignoring snmp pdu %u", resp->pdu_type);
         return (-1);
     }
 
@@ -1502,8 +1504,8 @@ int snmp_dialog(struct snmp_client *client, struct snmp_v1_pdu *req, struct snmp
     * if this is a GET,GETNEXT or GETBULK.
     */
     pdu = *req;
-    if (pdu.type == SNMP_PDU_GET || pdu.type == SNMP_PDU_GETNEXT ||
-        pdu.type == SNMP_PDU_GETBULK) {
+    if (pdu.pdu_type == SNMP_PDU_GET || pdu.pdu_type == SNMP_PDU_GETNEXT ||
+        pdu.pdu_type == SNMP_PDU_GETBULK) {
             for (i = 0; i < pdu.nbindings; i++)
                 pdu.bindings[i].syntax = SNMP_SYNTAX_NULL;
     }

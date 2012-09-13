@@ -151,9 +151,9 @@ typedef struct snmp_user {
 } snmp_user_t;
 
 typedef struct snmp_pdu {
-	char			community[SNMP_COMMUNITY_MAXLEN + 1];
+	char        community[SNMP_COMMUNITY_MAXLEN + 1];
 	enum snmp_version	version;
-	u_int			type;
+	u_int       pdu_type;
 
 	/* SNMPv3 PDU header fields */
 	int32_t			identifier;
@@ -283,11 +283,12 @@ enum snmp_code {
 
 #define SNMP_CODE_ERR_NOERROR	(SNMP_CODE_ERR_TOOBIG-1)
 
-#define	SNMP_MSG_AUTH_FLAG		0x1
-#define	SNMP_MSG_PRIV_FLAG		0x2
-#define	SNMP_MSG_REPORT_FLAG		0x4
+#define	SNMP_MSG_AUTH_FLAG   		0x1
+#define	SNMP_MSG_PRIV_FLAG   		0x2
+#define	SNMP_MSG_REPORT_FLAG 		0x4
 #define	SNMP_MSG_AUTODISCOVER		0x80
 
+void snmp_pdu_init(snmp_pdu_t *pdu);
 void snmp_value_free(snmp_value_t *);
 int snmp_value_parse(const char *, enum snmp_syntax, snmp_values_t *);
 int snmp_value_copy(snmp_value_t *, const snmp_value_t *);
