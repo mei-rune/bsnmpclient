@@ -33,7 +33,7 @@
 
 
 #ifndef _WIN32
-#include <sys/param.h> 
+#include <sys/param.h>
 #include <sys/uio.h>
 #include <unistd.h>
 #include <err.h>
@@ -118,18 +118,17 @@ static const struct {
     { "Gauge", SNMP_SYNTAX_GAUGE },
     { "TimeTicks", SNMP_SYNTAX_TIMETICKS },
     { "Counter64", SNMP_SYNTAX_COUNTER64 },
-    { "Unknown", SNMP_SYNTAX_UNKNOWN }, 
+    { "Unknown", SNMP_SYNTAX_UNKNOWN },
 };
 
-void snmptool_init(struct snmp_toolinfo *snmptoolctx)
-{
+void snmptool_init(struct snmp_toolinfo *snmptoolctx) {
     memset(snmptoolctx, 0, sizeof(struct snmp_toolinfo));
     snmptoolctx->objects = 0;
     snmptoolctx->mappings = NULL;
     snmptoolctx->flags = SNMP_PDU_GET;	/* XXX */
     SLIST_INIT(&snmptoolctx->filelist);
     snmp_client_init(&snmptoolctx->client);
-	//SET_MAXREP(snmptoolctx, SNMP_MAX_REPETITIONS);
+    //SET_MAXREP(snmptoolctx, SNMP_MAX_REPETITIONS);
 
     if (add_filename(snmptoolctx, bsnmpd_defs, &IsoOrgDod_OID, 0) < 0)
         warnx("Error adding file %s to list", bsnmpd_defs);
@@ -140,11 +139,10 @@ void snmptool_init(struct snmp_toolinfo *snmptoolctx)
 
 #define	OBJECT_IDX_LIST(o)	o->info->table_idx->index_list
 
-/* 
+/*
 * Walk through the file list and import string<->oid mappings from each file.
 */
-int32_t snmp_import_all(struct snmp_toolinfo *snmptoolctx)
-{
+int32_t snmp_import_all(struct snmp_toolinfo *snmptoolctx) {
     int32_t fc;
     struct fname *tmp;
 
@@ -186,8 +184,7 @@ int32_t snmp_import_all(struct snmp_toolinfo *snmptoolctx)
 * not string lenght.
 */
 int32_t add_filename(struct snmp_toolinfo *snmptoolctx, const char *filename,
-    const asn_oid_t *cut, int32_t done)
-{
+                     const asn_oid_t *cut, int32_t done) {
     char *fstring;
     struct fname *entry;
 
@@ -223,8 +220,7 @@ int32_t add_filename(struct snmp_toolinfo *snmptoolctx, const char *filename,
     return (1);
 }
 
-void free_filelist(struct snmp_toolinfo *snmptoolctx)
-{
+void free_filelist(struct snmp_toolinfo *snmptoolctx) {
     struct fname *f;
 
     if (snmptoolctx == NULL)
@@ -238,11 +234,10 @@ void free_filelist(struct snmp_toolinfo *snmptoolctx)
     }
 }
 
-static char isvalid_fchar(char c, int pos)
-{
+static char isvalid_fchar(char c, int pos) {
     if (isalpha(c)|| c == '/'|| c == '_' || c == '.' || c == '~' ||
-        (pos != 0 && isdigit(c))){
-            return (c);
+            (pos != 0 && isdigit(c))) {
+        return (c);
     }
 
     if (c == '\0')
@@ -261,8 +256,7 @@ static char isvalid_fchar(char c, int pos)
 * and will not compile with WARNS=5.
 * Copied from src/contrib/bsnmp/snmpd/main.c.
 */
-static int getsubopt1(char **arg, const char *const *options, char **valp, char **optp)
-{
+static int getsubopt1(char **arg, const char *const *options, char **valp, char **optp) {
     static const char *const delim = ",\t ";
     u_int i;
     char *ptr;
@@ -304,8 +298,7 @@ static int getsubopt1(char **arg, const char *const *options, char **valp, char 
     return (-1);
 }
 
-static int32_t parse_path(char *value)
-{
+static int32_t parse_path(char *value) {
     int32_t i, len;
 
     if (value == NULL)
@@ -329,8 +322,7 @@ static int32_t parse_path(char *value)
 }
 
 static int32_t parse_flist(struct snmp_toolinfo *snmptoolctx, char *value, char *path,
-    const asn_oid_t *cut)
-{
+                           const asn_oid_t *cut) {
     int32_t namelen;
     char filename[MAXPATHLEN + 1];
 
@@ -343,7 +335,7 @@ static int32_t parse_flist(struct snmp_toolinfo *snmptoolctx, char *value, char 
         if (isalpha(*value) && (path == NULL || path[0] == '\0')) {
             strlcpy(filename, SNMP_DEFS_DIR, MAXPATHLEN + 1);
             namelen = strlen(SNMP_DEFS_DIR);
-        } else if (path != NULL){
+        } else if (path != NULL) {
             strlcpy(filename, path, MAXPATHLEN + 1);
             namelen = strlen(path);
         } else
@@ -362,10 +354,10 @@ static int32_t parse_flist(struct snmp_toolinfo *snmptoolctx, char *value, char 
             else {
                 if (!isascii(*value) || !isprint(*value))
                     warnx("Unexpected character %#2x in"
-                    " filename", (u_int) *value);
+                          " filename", (u_int) *value);
                 else
                     warnx("Illegal character '%c' in"
-                    " filename", *value);
+                          " filename", *value);
                 return (-1);
             }
 
@@ -391,8 +383,7 @@ static int32_t parse_flist(struct snmp_toolinfo *snmptoolctx, char *value, char 
 * Functions to parse common input options for client tools and fill in the
 * snmp_client structure.
 */
-int32_t parse_file(struct snmp_toolinfo *snmptoolctx, char *opt_arg)
-{
+int32_t parse_file(struct snmp_toolinfo *snmptoolctx, char *opt_arg) {
     assert(opt_arg != NULL);
 
     if (parse_flist(snmptoolctx, opt_arg, NULL, &IsoOrgDod_OID) < 0)
@@ -401,8 +392,7 @@ int32_t parse_file(struct snmp_toolinfo *snmptoolctx, char *opt_arg)
     return (2);
 }
 
-int32_t parse_include(struct snmp_toolinfo *snmptoolctx, char *opt_arg)
-{
+int32_t parse_include(struct snmp_toolinfo *snmptoolctx, char *opt_arg) {
     char path[MAXPATHLEN + 1];
     int32_t cut_dflt, len, subopt;
     asn_oid_t cut;
@@ -471,8 +461,7 @@ int32_t parse_include(struct snmp_toolinfo *snmptoolctx, char *opt_arg)
     return (2);
 }
 
-int32_t parse_server(struct snmp_client* client, char *opt_arg)
-{
+int32_t parse_server(struct snmp_client* client, char *opt_arg) {
     assert(opt_arg != NULL);
 
     if (snmp_parse_server(client, opt_arg) < 0)
@@ -480,8 +469,8 @@ int32_t parse_server(struct snmp_client* client, char *opt_arg)
 
     if (client->trans > SNMP_TRANS_UDP && client->chost == NULL) {
         if ((client->chost = malloc(strlen(SNMP_DEFAULT_LOCAL + 1)))
-            == NULL) {
-                return (-1);
+                == NULL) {
+            return (-1);
         }
         strcpy(client->chost, SNMP_DEFAULT_LOCAL);
     }
@@ -489,8 +478,7 @@ int32_t parse_server(struct snmp_client* client, char *opt_arg)
     return (2);
 }
 
-int32_t parse_timeout(struct snmp_client* client, char *opt_arg)
-{
+int32_t parse_timeout(struct snmp_client* client, char *opt_arg) {
     int32_t v, saved_errno;
 
     assert(opt_arg != NULL);
@@ -510,8 +498,7 @@ int32_t parse_timeout(struct snmp_client* client, char *opt_arg)
     return (2);
 }
 
-int32_t parse_retry(struct snmp_client* client, char *opt_arg)
-{
+int32_t parse_retry(struct snmp_client* client, char *opt_arg) {
     uint32_t v;
     int32_t saved_errno;
 
@@ -532,8 +519,7 @@ int32_t parse_retry(struct snmp_client* client, char *opt_arg)
     return (2);
 }
 
-int32_t parse_version(struct snmp_client* client, char *opt_arg)
-{
+int32_t parse_version(struct snmp_client* client, char *opt_arg) {
     uint32_t v;
     int32_t saved_errno;
 
@@ -559,8 +545,8 @@ int32_t parse_version(struct snmp_client* client, char *opt_arg)
     case 3:
         client->version = SNMP_V3;
         client->security_model = SNMP_SECMODEL_USM;
-	    client->user.auth_proto = SNMP_AUTH_NOAUTH;
-	    client->user.priv_proto = SNMP_PRIV_NOPRIV;
+        client->user.auth_proto = SNMP_AUTH_NOAUTH;
+        client->user.priv_proto = SNMP_PRIV_NOPRIV;
         break;
     default:
         warnx("Unsupported SNMP version - %u", v);
@@ -572,8 +558,7 @@ int32_t parse_version(struct snmp_client* client, char *opt_arg)
     return (2);
 }
 
-int32_t parse_local_path(struct snmp_client* client, char *opt_arg)
-{
+int32_t parse_local_path(struct snmp_client* client, char *opt_arg) {
     assert(opt_arg != NULL);
 
     if (sizeof(opt_arg) > sizeof(SNMP_LOCAL_PATH)) {
@@ -585,8 +570,7 @@ int32_t parse_local_path(struct snmp_client* client, char *opt_arg)
     return (2);
 }
 
-int32_t parse_buflen(struct snmp_client* client, char *opt_arg)
-{
+int32_t parse_buflen(struct snmp_client* client, char *opt_arg) {
     uint32_t size;
     int32_t saved_errno;
 
@@ -613,20 +597,17 @@ int32_t parse_buflen(struct snmp_client* client, char *opt_arg)
     return (2);
 }
 
-int32_t parse_debug(struct snmp_client* client)
-{
+int32_t parse_debug(struct snmp_client* client) {
     client->dump_pdus = 1;
     return (1);
 }
 
-int32_t parse_num_oids(struct snmp_toolinfo *snmptoolctx)
-{
+int32_t parse_num_oids(struct snmp_toolinfo *snmptoolctx) {
     SET_NUMERIC(snmptoolctx);
     return (1);
 }
 
-int32_t parse_output(struct snmp_toolinfo *snmptoolctx, char *opt_arg)
-{
+int32_t parse_output(struct snmp_toolinfo *snmptoolctx, char *opt_arg) {
     assert(opt_arg != NULL);
 
     if (strlen(opt_arg) > strlen("verbose")) {
@@ -651,22 +632,19 @@ int32_t parse_output(struct snmp_toolinfo *snmptoolctx, char *opt_arg)
 }
 
 int32_t
-    parse_errors(struct snmp_toolinfo *snmptoolctx)
-{
+parse_errors(struct snmp_toolinfo *snmptoolctx) {
     SET_RETRY(snmptoolctx);
     return (1);
 }
 
 int32_t
-    parse_skip_access(struct snmp_toolinfo *snmptoolctx)
-{
+parse_skip_access(struct snmp_toolinfo *snmptoolctx) {
     SET_ERRIGNORE(snmptoolctx);
     return (1);
 }
 
 char *
-    snmp_parse_suboid(char *str, asn_oid_t *oid)
-{
+snmp_parse_suboid(char *str, asn_oid_t *oid) {
     char *endptr;
     asn_subid_t suboid;
 
@@ -691,8 +669,7 @@ char *
 }
 
 static char *
-    snmp_int2asn_oid(char *str, asn_oid_t *oid)
-{
+snmp_int2asn_oid(char *str, asn_oid_t *oid) {
     char *endptr;
     int32_t v, saved_errno;
 
@@ -702,7 +679,7 @@ static char *
     v = strtol(str, &endptr, 10);
     if (errno != 0) {
         warnx("Integer value %s not supported - %s", str,
-            strerror(errno));
+              strerror(errno));
         errno = saved_errno;
         return (NULL);
     }
@@ -716,9 +693,8 @@ static char *
 
 /* It is a bit weird to have a table indexed by OID but still... */
 static char *
-    snmp_oid2asn_oid(struct snmp_toolinfo *snmptoolctx, char *str,
-asn_oid_t *oid)
-{
+snmp_oid2asn_oid(struct snmp_toolinfo *snmptoolctx, char *str,
+                 asn_oid_t *oid) {
     int32_t i;
     char string[MAXSTR], *endptr;
     struct snmp_object obj;
@@ -749,8 +725,7 @@ asn_oid_t *oid)
 }
 
 static char *
-    snmp_ip2asn_oid(char *str, asn_oid_t *oid)
-{
+snmp_ip2asn_oid(char *str, asn_oid_t *oid) {
     uint32_t v;
     int32_t i;
     char *endptr, *ptr;
@@ -772,8 +747,7 @@ static char *
 
 /* 32-bit counter, gauge, timeticks. */
 static char *
-    snmp_uint2asn_oid(char *str, asn_oid_t *oid)
-{
+snmp_uint2asn_oid(char *str, asn_oid_t *oid) {
     char *endptr;
     uint32_t v;
     int32_t saved_errno;
@@ -784,7 +758,7 @@ static char *
     v = strtoul(str, &endptr, 10);
     if (errno != 0) {
         warnx("Integer value %s not supported - %s\n", str,
-            strerror(errno));
+              strerror(errno));
         errno = saved_errno;
         return (NULL);
     }
@@ -796,8 +770,7 @@ static char *
 }
 
 static char *
-    snmp_cnt64_2asn_oid(char *str, asn_oid_t *oid)
-{
+snmp_cnt64_2asn_oid(char *str, asn_oid_t *oid) {
     char *endptr;
     uint64_t v;
     int32_t saved_errno;
@@ -809,7 +782,7 @@ static char *
 
     if (errno != 0) {
         warnx("Integer value %s not supported - %s", str,
-            strerror(errno));
+              strerror(errno));
         errno = saved_errno;
         return (NULL);
     }
@@ -824,13 +797,12 @@ static char *
 }
 
 enum snmp_syntax
-    parse_syntax(char *str)
-{
+parse_syntax(char *str) {
     int32_t i;
 
     for (i = 0; i < SNMP_SYNTAX_UNKNOWN; i++) {
         if (strncmp(syntax_strings[i].str, str,
-            strlen(syntax_strings[i].str)) == 0)
+                    strlen(syntax_strings[i].str)) == 0)
             return (syntax_strings[i].stx);
     }
 
@@ -838,9 +810,8 @@ enum snmp_syntax
 }
 
 static char *
-    snmp_parse_subindex(struct snmp_toolinfo *snmptoolctx, char *str,
-struct index *idx, struct snmp_object *object)
-{
+snmp_parse_subindex(struct snmp_toolinfo *snmptoolctx, char *str,
+                    struct index *idx, struct snmp_object *object) {
     char *ptr;
     int32_t i;
     enum snmp_syntax stx;
@@ -865,7 +836,7 @@ struct index *idx, struct snmp_object *object)
 
         if (stx != idx->syntax && !ISSET_ERRIGNORE(snmptoolctx)) {
             warnx("Syntax mismatch - %d expected, %d given",
-                idx->syntax, stx);
+                  idx->syntax, stx);
             return (NULL);
         }
         /*
@@ -881,7 +852,7 @@ struct index *idx, struct snmp_object *object)
         return (snmp_int2asn_oid(ptr, &(object->val.var)));
     case SNMP_SYNTAX_OID:
         return (snmp_oid2asn_oid(snmptoolctx, ptr,
-            &(object->val.var)));
+                                 &(object->val.var)));
     case SNMP_SYNTAX_IPADDRESS:
         return (snmp_ip2asn_oid(ptr, &(object->val.var)));
     case SNMP_SYNTAX_COUNTER:
@@ -903,9 +874,8 @@ struct index *idx, struct snmp_object *object)
 }
 
 char *
-    snmp_parse_index(struct snmp_toolinfo *snmptoolctx, char *str,
-struct snmp_object *object)
-{
+snmp_parse_index(struct snmp_toolinfo *snmptoolctx, char *str,
+                 struct snmp_object *object) {
     char *ptr;
     struct index *temp;
 
@@ -915,7 +885,7 @@ struct snmp_object *object)
     ptr = NULL;
     STAILQ_FOREACH(temp, &(OBJECT_IDX_LIST(object)), link) {
         if ((ptr = snmp_parse_subindex(snmptoolctx, str, temp, object))
-            == NULL)
+                == NULL)
             return (NULL);
 
         if (*ptr != ',' && *ptr != ']')
@@ -937,8 +907,7 @@ struct snmp_object *object)
 * If all is ok - return the length of the oid.
 */
 int32_t
-    snmp_parse_numoid(char *argv, asn_oid_t *var)
-{
+snmp_parse_numoid(char *argv, asn_oid_t *var) {
     char *endptr, *str;
     asn_subid_t suboid;
 
@@ -973,8 +942,7 @@ int32_t
 
 /* Append a length 1 suboid to an asn_oid structure. */
 int32_t
-    snmp_suboid_append(asn_oid_t *var, asn_subid_t suboid)
-{
+snmp_suboid_append(asn_oid_t *var, asn_subid_t suboid) {
     if (var == NULL)
         return (-1);
 
@@ -990,8 +958,7 @@ int32_t
 
 /* Pop the last suboid from an asn_oid structure. */
 int32_t
-    snmp_suboid_pop(asn_oid_t *var)
-{
+snmp_suboid_pop(asn_oid_t *var) {
     asn_subid_t suboid;
 
     if (var == NULL)
@@ -1012,9 +979,8 @@ int32_t
 * (snmp_verify_inoid_f) function must be provided to validate the input string.
 */
 int32_t
-    snmp_object_add(struct snmp_toolinfo *snmptoolctx, snmp_verify_inoid_f func,
-    char *string)
-{
+snmp_object_add(struct snmp_toolinfo *snmptoolctx, snmp_verify_inoid_f func,
+                char *string) {
     struct snmp_object *obj;
 
     if (snmptoolctx == NULL)
@@ -1045,8 +1011,7 @@ int32_t
 
 /* Given an OID, find it in the object list and remove it. */
 int32_t
-    snmp_object_remove(struct snmp_toolinfo *snmptoolctx, asn_oid_t *oid)
-{
+snmp_object_remove(struct snmp_toolinfo *snmptoolctx, asn_oid_t *oid) {
     struct snmp_object *temp;
 
     if (SLIST_EMPTY(&snmptoolctx->snmp_objectlist)) {
@@ -1056,8 +1021,8 @@ int32_t
 
 
     SLIST_FOREACH(temp, &snmptoolctx->snmp_objectlist, link)
-        if (asn_compare_oid(&(temp->val.var), oid) == 0)
-            break;
+    if (asn_compare_oid(&(temp->val.var), oid) == 0)
+        break;
 
     if (temp == NULL) {
         warnx("No such object in list");
@@ -1066,7 +1031,7 @@ int32_t
 
     SLIST_REMOVE(&snmptoolctx->snmp_objectlist, temp, snmp_object, link);
     if (temp->val.syntax == SNMP_SYNTAX_OCTETSTRING &&
-        temp->val.v.octetstring.octets != NULL)
+            temp->val.v.octetstring.octets != NULL)
         free(temp->val.v.octetstring.octets);
     free(temp);
 
@@ -1074,15 +1039,14 @@ int32_t
 }
 
 static void
-    snmp_object_freeall(struct snmp_toolinfo *snmptoolctx)
-{
+snmp_object_freeall(struct snmp_toolinfo *snmptoolctx) {
     struct snmp_object *o;
 
     while ((o = SLIST_FIRST(&snmptoolctx->snmp_objectlist)) != NULL) {
         SLIST_REMOVE_HEAD(&snmptoolctx->snmp_objectlist, link);
 
         if (o->val.syntax == SNMP_SYNTAX_OCTETSTRING &&
-            o->val.v.octetstring.octets != NULL)
+                o->val.v.octetstring.octets != NULL)
             free(o->val.v.octetstring.octets);
         free(o);
     }
@@ -1090,8 +1054,7 @@ static void
 
 /* Do all possible memory release before exit. */
 void
-    snmp_tool_freeall(struct snmp_toolinfo *snmptoolctx)
-{
+snmp_tool_freeall(struct snmp_toolinfo *snmptoolctx) {
     if (snmptoolctx->client.chost != NULL) {
         free(snmptoolctx->client.chost);
         snmptoolctx->client.chost = NULL;
@@ -1115,10 +1078,9 @@ void
 * function actually adds the variable to the PDU and must not be NULL.
 */
 int32_t
-    snmp_pdu_add_bindings(struct snmp_toolinfo *snmptoolctx,
-    snmp_verify_vbind_f vfunc, snmp_add_vbind_f afunc,
-snmp_pdu_t *pdu, int32_t maxcount)
-{
+snmp_pdu_add_bindings(struct snmp_toolinfo *snmptoolctx,
+                      snmp_verify_vbind_f vfunc, snmp_add_vbind_f afunc,
+                      snmp_pdu_t *pdu, int32_t maxcount) {
     int32_t nbindings, abind;
     struct snmp_object *obj;
 
@@ -1159,26 +1121,24 @@ snmp_pdu_t *pdu, int32_t maxcount)
 * Locate an object in the object list and set a corresponding error status.
 */
 int32_t
-    snmp_object_seterror(struct snmp_toolinfo *snmptoolctx,
-snmp_value_t *err_value, int32_t error_status)
-{
+snmp_object_seterror(struct snmp_toolinfo *snmptoolctx,
+                     snmp_value_t *err_value, int32_t error_status) {
     struct snmp_object *obj;
 
     if (SLIST_EMPTY(&snmptoolctx->snmp_objectlist) || err_value == NULL)
         return (-1);
 
     SLIST_FOREACH(obj, &snmptoolctx->snmp_objectlist, link)
-        if (asn_compare_oid(&(err_value->var), &(obj->val.var)) == 0) {
-            obj->error = error_status;
-            return (1);
-        }
+    if (asn_compare_oid(&(err_value->var), &(obj->val.var)) == 0) {
+        obj->error = error_status;
+        return (1);
+    }
 
-        return (0);
+    return (0);
 }
 
 static void snmp_output_octetstring(struct snmp_toolinfo *snmptoolctx, enum snmp_tc tc,
-    uint32_t len, char *octets)
-{
+                                    uint32_t len, char *octets) {
     char *buf;
 
     if (len == 0 || octets == NULL)
@@ -1186,7 +1146,7 @@ static void snmp_output_octetstring(struct snmp_toolinfo *snmptoolctx, enum snmp
 
     if (GET_OUTPUT(snmptoolctx) == OUTPUT_VERBOSE)
         fprintf(stdout, "%s : ",
-        syntax_strings[SNMP_SYNTAX_OCTETSTRING].str);
+                syntax_strings[SNMP_SYNTAX_OCTETSTRING].str);
 
     if ((buf = snmp_oct2tc(tc, len, octets)) != NULL) {
         fprintf(stdout, "%s", buf);
@@ -1195,8 +1155,7 @@ static void snmp_output_octetstring(struct snmp_toolinfo *snmptoolctx, enum snmp
 }
 
 static void snmp_output_octetindex(struct snmp_toolinfo *snmptoolctx, enum snmp_tc tc,
-        asn_oid_t *oid)
-{
+                                   asn_oid_t *oid) {
     uint32_t i;
     uint8_t *s;
 
@@ -1213,8 +1172,7 @@ static void snmp_output_octetindex(struct snmp_toolinfo *snmptoolctx, enum snmp_
 /*
 * Check and output syntax type and value.
 */
-static void snmp_output_oid_value(struct snmp_toolinfo *snmptoolctx, asn_oid_t *oid)
-{
+static void snmp_output_oid_value(struct snmp_toolinfo *snmptoolctx, asn_oid_t *oid) {
     char oid_string[ASN_OIDSTRLEN];
     struct snmp_object obj;
 
@@ -1242,68 +1200,61 @@ static void snmp_output_oid_value(struct snmp_toolinfo *snmptoolctx, asn_oid_t *
 }
 
 static void snmp_output_int(struct snmp_toolinfo *snmptoolctx, struct enum_pairs *enums,
-    int32_t int_val)
-{
+                            int32_t int_val) {
     char *string;
 
     if (GET_OUTPUT(snmptoolctx) == OUTPUT_VERBOSE)
         fprintf(stdout, "%s : ",
-        syntax_strings[SNMP_SYNTAX_INTEGER].str);
+                syntax_strings[SNMP_SYNTAX_INTEGER].str);
 
     if (enums != NULL && (string = enum_string_lookup(enums, int_val))
-        != NULL)
+            != NULL)
         fprintf(stdout, "%s", string);
     else
         fprintf(stdout, "%d", int_val);
 }
 
-static void snmp_output_ipaddress(struct snmp_toolinfo *snmptoolctx, uint8_t *ip)
-{
+static void snmp_output_ipaddress(struct snmp_toolinfo *snmptoolctx, uint8_t *ip) {
     if (GET_OUTPUT(snmptoolctx) == OUTPUT_VERBOSE)
         fprintf(stdout, "%s : ",
-        syntax_strings[SNMP_SYNTAX_IPADDRESS].str);
+                syntax_strings[SNMP_SYNTAX_IPADDRESS].str);
 
     fprintf(stdout, "%u.%u.%u.%u", ip[0], ip[1], ip[2], ip[3]);
 }
 
-static void snmp_output_counter(struct snmp_toolinfo *snmptoolctx, uint32_t counter)
-{
+static void snmp_output_counter(struct snmp_toolinfo *snmptoolctx, uint32_t counter) {
     if (GET_OUTPUT(snmptoolctx) == OUTPUT_VERBOSE)
         fprintf(stdout, "%s : ",
-        syntax_strings[SNMP_SYNTAX_COUNTER].str);
+                syntax_strings[SNMP_SYNTAX_COUNTER].str);
 
     fprintf(stdout, "%u", counter);
 }
 
-static void snmp_output_gauge(struct snmp_toolinfo *snmptoolctx, uint32_t gauge)
-{
+static void snmp_output_gauge(struct snmp_toolinfo *snmptoolctx, uint32_t gauge) {
     if (GET_OUTPUT(snmptoolctx) == OUTPUT_VERBOSE)
         fprintf(stdout, "%s : ", syntax_strings[SNMP_SYNTAX_GAUGE].str);
 
     fprintf(stdout, "%u", gauge);
 }
 
-static void snmp_output_ticks(struct snmp_toolinfo *snmptoolctx, uint32_t ticks)
-{
+static void snmp_output_ticks(struct snmp_toolinfo *snmptoolctx, uint32_t ticks) {
     if (GET_OUTPUT(snmptoolctx) == OUTPUT_VERBOSE)
         fprintf(stdout, "%s : ",
-        syntax_strings[SNMP_SYNTAX_TIMETICKS].str);
+                syntax_strings[SNMP_SYNTAX_TIMETICKS].str);
 
     fprintf(stdout, "%u", ticks);
 }
 
-static void snmp_output_counter64(struct snmp_toolinfo *snmptoolctx, uint64_t counter64)
-{
+static void snmp_output_counter64(struct snmp_toolinfo *snmptoolctx, uint64_t counter64) {
     if (GET_OUTPUT(snmptoolctx) == OUTPUT_VERBOSE)
         fprintf(stdout, "%s : ",
-        syntax_strings[SNMP_SYNTAX_COUNTER64].str);
+                syntax_strings[SNMP_SYNTAX_COUNTER64].str);
 
     fprintf(stdout,"%ju", counter64);
 }
 
 int32_t snmp_output_numval(struct snmp_toolinfo *snmptoolctx, snmp_value_t *val,
-            struct snmp_oid2str *entry)
-{
+                           struct snmp_oid2str *entry) {
     if (val == NULL)
         return (-1);
 
@@ -1314,7 +1265,7 @@ int32_t snmp_output_numval(struct snmp_toolinfo *snmptoolctx, snmp_value_t *val,
     case SNMP_SYNTAX_INTEGER:
         if (entry != NULL)
             snmp_output_int(snmptoolctx, entry->snmp_enum,
-            val->v.integer);
+                            val->v.integer);
         else
             snmp_output_int(snmptoolctx, NULL, val->v.integer);
         break;
@@ -1322,10 +1273,10 @@ int32_t snmp_output_numval(struct snmp_toolinfo *snmptoolctx, snmp_value_t *val,
     case SNMP_SYNTAX_OCTETSTRING:
         if (entry != NULL)
             snmp_output_octetstring(snmptoolctx, entry->tc,
-            val->v.octetstring.len, val->v.octetstring.octets);
+                                    val->v.octetstring.len, val->v.octetstring.octets);
         else
             snmp_output_octetstring(snmptoolctx, SNMP_STRING,
-            val->v.octetstring.len, val->v.octetstring.octets);
+                                    val->v.octetstring.len, val->v.octetstring.octets);
         break;
 
     case SNMP_SYNTAX_OID:
@@ -1381,8 +1332,7 @@ int32_t snmp_output_numval(struct snmp_toolinfo *snmptoolctx, snmp_value_t *val,
 }
 
 static int32_t snmp_fill_object(struct snmp_toolinfo *snmptoolctx, struct snmp_object *obj,
-             snmp_value_t *val)
-{
+                                snmp_value_t *val) {
     int32_t rc;
     asn_subid_t suboid;
 
@@ -1408,8 +1358,7 @@ static int32_t snmp_fill_object(struct snmp_toolinfo *snmptoolctx, struct snmp_o
 }
 
 static int32_t snmp_output_index(struct snmp_toolinfo *snmptoolctx, struct index *stx,
-             asn_oid_t *oid)
-{
+                                 asn_oid_t *oid) {
     uint8_t ip[4];
     uint32_t bytes = 1;
     uint64_t cnt64;
@@ -1428,7 +1377,7 @@ static int32_t snmp_output_index(struct snmp_toolinfo *snmptoolctx, struct index
 
     case SNMP_SYNTAX_OCTETSTRING:
         if ((temp.subs[0] > temp.len -1 ) || (temp.subs[0] >
-            ASN_MAXOCTETSTRING))
+                                              ASN_MAXOCTETSTRING))
             return (-1);
         snmp_output_octetindex(snmptoolctx, stx->tc, &temp);
         bytes += temp.subs[0];
@@ -1436,7 +1385,7 @@ static int32_t snmp_output_index(struct snmp_toolinfo *snmptoolctx, struct index
 
     case SNMP_SYNTAX_OID:
         if ((temp.subs[0] > temp.len -1) || (temp.subs[0] >
-            ASN_MAXOIDLEN))
+                                             ASN_MAXOIDLEN))
             return (-1);
 
         bytes += temp.subs[0];
@@ -1482,8 +1431,7 @@ static int32_t snmp_output_index(struct snmp_toolinfo *snmptoolctx, struct index
     return (bytes);
 }
 
-static int32_t snmp_output_object(struct snmp_toolinfo *snmptoolctx, struct snmp_object *o)
-{
+static int32_t snmp_output_object(struct snmp_toolinfo *snmptoolctx, struct snmp_object *o) {
     int32_t i, first, len;
     asn_oid_t oid;
     struct index *temp;
@@ -1493,7 +1441,7 @@ static int32_t snmp_output_object(struct snmp_toolinfo *snmptoolctx, struct snmp
 
     if (o->info->table_idx == NULL) {
         fprintf(stdout,"%s.%d", o->info->string,
-            o->val.var.subs[o->val.var.len - 1]);
+                o->val.var.subs[o->val.var.len - 1]);
         return (1);
     }
 
@@ -1502,7 +1450,7 @@ static int32_t snmp_output_object(struct snmp_toolinfo *snmptoolctx, struct snmp
 
     len = 1;
     asn_slice_oid(&oid, &(o->val.var), (o->info->table_idx->var.len + len),
-        o->val.var.len);
+                  o->val.var.len);
 
     first = 1;
     STAILQ_FOREACH(temp, &(OBJECT_IDX_LIST(o)), link) {
@@ -1515,15 +1463,14 @@ static int32_t snmp_output_object(struct snmp_toolinfo *snmptoolctx, struct snmp
         len += i;
         memset(&oid, 0, sizeof(asn_oid_t));
         asn_slice_oid(&oid, &(o->val.var),
-            (o->info->table_idx->var.len + len), o->val.var.len + 1);
+                      (o->info->table_idx->var.len + len), o->val.var.len + 1);
     }
 
     fprintf(stdout,"]");
     return (1);
 }
 
-void snmp_output_err_resp(struct snmp_toolinfo *snmptoolctx, snmp_pdu_t *pdu)
-{
+void snmp_output_err_resp(struct snmp_toolinfo *snmptoolctx, snmp_pdu_t *pdu) {
     char buf[ASN_OIDSTRLEN];
     struct snmp_object object;
 
@@ -1533,28 +1480,27 @@ void snmp_output_err_resp(struct snmp_toolinfo *snmptoolctx, snmp_pdu_t *pdu)
     }
 
     fprintf(stdout, "Agent %s:%s returned error \n", snmptoolctx->client.chost,
-        snmptoolctx->client.cport);
+            snmptoolctx->client.cport);
 
-	if(pdu->error_index > 0) {
-		if (!ISSET_NUMERIC(snmptoolctx) && (snmp_fill_object(snmptoolctx, &object,
-			&(pdu->bindings[pdu->error_index - 1])) > 0))
-			snmp_output_object(snmptoolctx, &object);
-		else {
-			asn_oid2str_r(&(pdu->bindings[pdu->error_index - 1].var), buf);
-			fprintf(stdout,"%s", buf);
-		}
-	}
+    if(pdu->error_index > 0) {
+        if (!ISSET_NUMERIC(snmptoolctx) && (snmp_fill_object(snmptoolctx, &object,
+                                            &(pdu->bindings[pdu->error_index - 1])) > 0))
+            snmp_output_object(snmptoolctx, &object);
+        else {
+            asn_oid2str_r(&(pdu->bindings[pdu->error_index - 1].var), buf);
+            fprintf(stdout,"%s", buf);
+        }
+    }
 
     fprintf(stdout," caused error - ");
     if ((pdu->error_status > 0) && (pdu->error_status <=
-        SNMP_ERR_INCONS_NAME))
+                                    SNMP_ERR_INCONS_NAME))
         fprintf(stdout, "%s\n", error_strings[pdu->error_status].str);
     else
         fprintf(stdout,"%s\n", error_strings[SNMP_ERR_UNKNOWN].str);
 }
 
-int32_t snmp_output_resp(struct snmp_toolinfo *snmptoolctx, snmp_pdu_t *pdu)
-{
+int32_t snmp_output_resp(struct snmp_toolinfo *snmptoolctx, snmp_pdu_t *pdu) {
     int32_t error;
     char p[ASN_OIDSTRLEN];
     uint32_t i;
@@ -1563,8 +1509,8 @@ int32_t snmp_output_resp(struct snmp_toolinfo *snmptoolctx, snmp_pdu_t *pdu)
     for (i = 0, error = 0; i < pdu->nbindings; i++) {
         if (GET_OUTPUT(snmptoolctx) != OUTPUT_QUIET) {
             if (!ISSET_NUMERIC(snmptoolctx) &&
-                (snmp_fill_object(snmptoolctx, &object,
-                &(pdu->bindings[i])) > 0))
+                    (snmp_fill_object(snmptoolctx, &object,
+                                      &(pdu->bindings[i])) > 0))
                 snmp_output_object(snmptoolctx, &object);
             else {
                 asn_oid2str_r(&(pdu->bindings[i].var), p);

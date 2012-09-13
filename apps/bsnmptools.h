@@ -77,86 +77,86 @@ void err(int code, const char *fmt, ...);
 #endif
 
 enum snmp_access {
-	SNMP_ACCESS_NONE = 0,
-	SNMP_ACCESS_GET,
-	SNMP_ACCESS_SET,
-	SNMP_ACCESS_GETSET,
+    SNMP_ACCESS_NONE = 0,
+    SNMP_ACCESS_GET,
+    SNMP_ACCESS_SET,
+    SNMP_ACCESS_GETSET,
 };
 
 /* A structure for integer-string enumerations. */
 struct enum_pair {
-	int32_t	enum_val;
-	char	*enum_str;
-	STAILQ_ENTRY(enum_pair)	link;
+    int32_t	enum_val;
+    char	*enum_str;
+    STAILQ_ENTRY(enum_pair)	link;
 };
 
 STAILQ_HEAD(enum_pairs, enum_pair);
 
 struct enum_type {
-	char		*name;
-	uint32_t	syntax;
-	int32_t		is_enum;
-	int32_t		is_bits;
-	struct enum_pairs	*snmp_enum;
-	COMPAT_SLIST_ENTRY(enum_type)	link;
+    char		*name;
+    uint32_t	syntax;
+    int32_t		is_enum;
+    int32_t		is_bits;
+    struct enum_pairs	*snmp_enum;
+    COMPAT_SLIST_ENTRY(enum_type)	link;
 };
 
 SLIST_HEAD(snmp_enum_tc, enum_type);
 
 struct index {
-	enum snmp_tc		tc;
-	enum snmp_syntax	syntax;
-	struct enum_pairs	*snmp_enum;
-	STAILQ_ENTRY(index)	link;
+    enum snmp_tc		tc;
+    enum snmp_syntax	syntax;
+    struct enum_pairs	*snmp_enum;
+    STAILQ_ENTRY(index)	link;
 };
 
 STAILQ_HEAD(snmp_idxlist, index);
 
 struct snmp_index_entry {
-	char			*string;
-	uint32_t		strlen;
-	asn_oid_t		var;
-	struct snmp_idxlist	index_list;
-	COMPAT_SLIST_ENTRY(snmp_index_entry)	link;
+    char			*string;
+    uint32_t		strlen;
+    asn_oid_t		var;
+    struct snmp_idxlist	index_list;
+    COMPAT_SLIST_ENTRY(snmp_index_entry)	link;
 };
 
 /* Information needed for oid to string conversion. */
 struct snmp_oid2str {
-	char			*string;
-	uint32_t		strlen;
-	enum snmp_tc		tc;
-	enum snmp_syntax	syntax;
-	enum snmp_access	access;
-	asn_oid_t		var;
-	/* A pointer to a entry from the table list - OK if NULL. */
-	struct snmp_index_entry	*table_idx;
-	/*
-	 * A singly-linked tail queue of all (int, string) pairs -
-	 * for INTEGER syntax only.
-	 */
-	struct enum_pairs	*snmp_enum;
-	COMPAT_SLIST_ENTRY(snmp_oid2str)	link;
+    char			*string;
+    uint32_t		strlen;
+    enum snmp_tc		tc;
+    enum snmp_syntax	syntax;
+    enum snmp_access	access;
+    asn_oid_t		var;
+    /* A pointer to a entry from the table list - OK if NULL. */
+    struct snmp_index_entry	*table_idx;
+    /*
+     * A singly-linked tail queue of all (int, string) pairs -
+     * for INTEGER syntax only.
+     */
+    struct enum_pairs	*snmp_enum;
+    COMPAT_SLIST_ENTRY(snmp_oid2str)	link;
 };
 
 /* A structure to hold each oid input by user. */
 struct snmp_object {
-	/* Flag - if set, the variable caused error in a previous request. */
-	int32_t			error;
-	/*
-	 * A pointer in the mapping lists - not used if OIDs are input as
-	 * numericals.
-	 */
-	struct snmp_oid2str	*info;
-	/* A snmp value to hold the actual oid, syntax and value. */
-	snmp_value_t	val;
-	COMPAT_SLIST_ENTRY(snmp_object)	link;
+    /* Flag - if set, the variable caused error in a previous request. */
+    int32_t			error;
+    /*
+     * A pointer in the mapping lists - not used if OIDs are input as
+     * numericals.
+     */
+    struct snmp_oid2str	*info;
+    /* A snmp value to hold the actual oid, syntax and value. */
+    snmp_value_t	val;
+    COMPAT_SLIST_ENTRY(snmp_object)	link;
 };
 
 struct fname {
-	char		*name;
-	int32_t		done;
-	asn_oid_t	cut;
-	COMPAT_SLIST_ENTRY(fname)	link;
+    char		*name;
+    int32_t		done;
+    asn_oid_t	cut;
+    COMPAT_SLIST_ENTRY(fname)	link;
 };
 
 SLIST_HEAD(snmp_mapping, snmp_oid2str);
@@ -167,45 +167,45 @@ SLIST_HEAD(snmp_table_index, snmp_index_entry);
  * Keep a list for every syntax type.
  */
 struct snmp_mappings {
-	/* The list containing all non-leaf nodes. */
-	struct snmp_mapping		nodelist;
-	/* INTEGER/INTEGER32 types. */
-	struct snmp_mapping		intlist;
-	/* OCTETSTRING types. */
-	struct snmp_mapping		octlist;
-	/* OID types. */
-	struct snmp_mapping		oidlist;
-	/* IPADDRESS types. */
-	struct snmp_mapping		iplist;
-	/* TIMETICKS types. */
-	struct snmp_mapping		ticklist;
-	/* COUNTER types. */
-	struct snmp_mapping		cntlist;
-	/* GAUGE types. */
-	struct snmp_mapping		gaugelist;
-	/* COUNTER64 types. */
-	struct snmp_mapping		cnt64list;
-	/* ENUM values for oid types. */
-	struct snmp_mapping		enumlist;
-	/* Description of all table entry types. */
-	struct snmp_table_index		tablelist;
-	/* Defined enumerated textual conventions. */
-	struct snmp_enum_tc		tclist;
+    /* The list containing all non-leaf nodes. */
+    struct snmp_mapping		nodelist;
+    /* INTEGER/INTEGER32 types. */
+    struct snmp_mapping		intlist;
+    /* OCTETSTRING types. */
+    struct snmp_mapping		octlist;
+    /* OID types. */
+    struct snmp_mapping		oidlist;
+    /* IPADDRESS types. */
+    struct snmp_mapping		iplist;
+    /* TIMETICKS types. */
+    struct snmp_mapping		ticklist;
+    /* COUNTER types. */
+    struct snmp_mapping		cntlist;
+    /* GAUGE types. */
+    struct snmp_mapping		gaugelist;
+    /* COUNTER64 types. */
+    struct snmp_mapping		cnt64list;
+    /* ENUM values for oid types. */
+    struct snmp_mapping		enumlist;
+    /* Description of all table entry types. */
+    struct snmp_table_index		tablelist;
+    /* Defined enumerated textual conventions. */
+    struct snmp_enum_tc		tclist;
 };
 
 struct snmp_toolinfo {
     /* the snmp client */
     struct snmp_client client;
-    
-	uint32_t	flags;
-	/* Number of initially input OIDs. */
-	int32_t		objects;
-	/* List of all input OIDs. */
-	SLIST_HEAD(snmp_objectlist, snmp_object)	snmp_objectlist;
-	/* All known OID to string mapping data. */
-	struct snmp_mappings	*mappings;
-	/* A list of .defs filenames to search oid<->string mapping. */
-	struct fname_list	filelist;
+
+    uint32_t	flags;
+    /* Number of initially input OIDs. */
+    int32_t		objects;
+    /* List of all input OIDs. */
+    SLIST_HEAD(snmp_objectlist, snmp_object)	snmp_objectlist;
+    /* All known OID to string mapping data. */
+    struct snmp_mappings	*mappings;
+    /* A list of .defs filenames to search oid<->string mapping. */
+    struct fname_list	filelist;
 };
 
 /* XXX we might want to get away with this and will need to touch
@@ -217,9 +217,9 @@ extern struct snmp_toolinfo snmptool;
 #define	NUMERIC_BIT	0x00000004	/* bit 2 for numeric oids */
 #define	RETRY_BIT	0x00000008 	/* bit 3 for retry on error responce */
 #define	ERRIGNORE_BIT	0x00000010	/* bit 4 for skip sanity checking */
-		/*	0x000000e0 */	/* bits 5-7 reserverd */
+/*	0x000000e0 */	/* bits 5-7 reserverd */
 #define	PDUTYPE_BITS	0x00000f00	/* bits 8-11 for pdu type */
-		/*	0x0000f000 */	/* bit 12-15 reserverd */
+/*	0x0000f000 */	/* bit 12-15 reserverd */
 #define	MAXREP_BITS	0x00ff0000	/* bits 16-23 for max-repetit. value */
 #define	NONREP_BITS	0xff000000	/* bits 24-31 for non-repeaters value */
 
@@ -257,7 +257,7 @@ void snmptool_init(struct snmp_toolinfo *toolinfo);
 int32_t snmp_import_file(struct snmp_toolinfo *, struct fname *file); /* bsnmpimport.c */
 int32_t snmp_import_all(struct snmp_toolinfo *);
 int32_t add_filename(struct snmp_toolinfo *, const char *filename, const asn_oid_t *cut,
-    int32_t done);
+                     int32_t done);
 void free_filelist(struct snmp_toolinfo *);
 void snmp_tool_freeall(struct snmp_toolinfo *);
 void snmp_import_dump(int all);
@@ -274,11 +274,11 @@ struct enum_pairs *enum_pairs_init(void);
 void enum_pairs_free(struct enum_pairs *headp);
 void snmp_mapping_entryfree(struct snmp_oid2str *entry);
 int32_t enum_pair_insert(struct enum_pairs *headp, int32_t enum_val,
-    char *enum_str);
+                         char *enum_str);
 char *enum_string_lookup(struct enum_pairs *headp, int32_t enum_val);
 int32_t enum_number_lookup(struct enum_pairs *headp, char *enum_str);
 int32_t snmp_syntax_insert(struct snmp_idxlist *headp, struct enum_pairs *enums,
-    enum snmp_syntax syntax, enum snmp_tc tc);
+                           enum snmp_syntax syntax, enum snmp_tc tc);
 int32_t snmp_table_insert(struct snmp_toolinfo *, struct snmp_index_entry *entry);
 
 struct enum_type *snmp_enumtc_init(char *name);
@@ -325,11 +325,11 @@ int32_t snmp_suboid_append(asn_oid_t *var, asn_subid_t suboid);
 int32_t snmp_suboid_pop(asn_oid_t *var);
 
 typedef int32_t (*snmp_verify_vbind_f) (struct snmp_toolinfo *, snmp_pdu_t *pdu,
-    struct snmp_object *obj);
+                                        struct snmp_object *obj);
 typedef int32_t (*snmp_add_vbind_f) (snmp_pdu_t *pdu,
-    struct snmp_object *obj);
+                                     struct snmp_object *obj);
 int32_t snmp_pdu_add_bindings(struct snmp_toolinfo *, snmp_verify_vbind_f vfunc, snmp_add_vbind_f afunc,
-    snmp_pdu_t *pdu, int32_t);
+                              snmp_pdu_t *pdu, int32_t);
 
 int32_t snmp_output_numval(struct snmp_toolinfo *, snmp_value_t * val, struct snmp_oid2str *entry);
 void snmp_output_val(snmp_value_t *val);

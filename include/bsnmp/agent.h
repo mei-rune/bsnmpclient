@@ -4,7 +4,7 @@
  *	All rights reserved.
  *
  * Author: Harti Brandt <harti@freebsd.org>
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -13,7 +13,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY AUTHOR AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -36,73 +36,73 @@
 struct snmp_dependency;
 
 enum snmp_ret {
-	/* OK, generate a response */
-	SNMP_RET_OK	= 0,
-	/* Error, ignore packet (no response) */
-	SNMP_RET_IGN	= 1,
-	/* Error, generate response from original packet */
-	SNMP_RET_ERR	= 2
+    /* OK, generate a response */
+    SNMP_RET_OK	= 0,
+    /* Error, ignore packet (no response) */
+    SNMP_RET_IGN	= 1,
+    /* Error, generate response from original packet */
+    SNMP_RET_ERR	= 2
 };
 
 /* Semi-Opaque object for SET operations */
 struct snmp_context {
-	u_int	var_index;
-	struct snmp_scratch *scratch;
-	struct snmp_dependency *dep;
-	void	*data;		/* user data */
-	enum snmp_ret code;	/* return code */
+    u_int	var_index;
+    struct snmp_scratch *scratch;
+    struct snmp_dependency *dep;
+    void	*data;		/* user data */
+    enum snmp_ret code;	/* return code */
 };
 
 struct snmp_scratch {
-	void		*ptr1;
-	void		*ptr2;
-	uint32_t	int1;
-	uint32_t	int2;
+    void		*ptr1;
+    void		*ptr2;
+    uint32_t	int1;
+    uint32_t	int2;
 };
 
 enum snmp_depop {
-	SNMP_DEPOP_COMMIT,
-	SNMP_DEPOP_ROLLBACK,
-	SNMP_DEPOP_FINISH
+    SNMP_DEPOP_COMMIT,
+    SNMP_DEPOP_ROLLBACK,
+    SNMP_DEPOP_FINISH
 };
 
 typedef int (*snmp_depop_t)(struct snmp_context *, struct snmp_dependency *,
-    enum snmp_depop);
+                            enum snmp_depop);
 
 struct snmp_dependency {
-	asn_oid_t	obj;
-	asn_oid_t	idx;
+    asn_oid_t	obj;
+    asn_oid_t	idx;
 };
 
 /*
  * The TREE
  */
 enum snmp_node_type {
-	SNMP_NODE_LEAF = 1,
-	SNMP_NODE_COLUMN
+    SNMP_NODE_LEAF = 1,
+    SNMP_NODE_COLUMN
 };
 
 enum snmp_op {
-	SNMP_OP_GET 	= 1,
-	SNMP_OP_GETNEXT,
-	SNMP_OP_SET,
-	SNMP_OP_COMMIT,
-	SNMP_OP_ROLLBACK,
+    SNMP_OP_GET 	= 1,
+    SNMP_OP_GETNEXT,
+    SNMP_OP_SET,
+    SNMP_OP_COMMIT,
+    SNMP_OP_ROLLBACK,
 };
 
 typedef int (*snmp_op_t)(struct snmp_context *, snmp_value_t *,
-    u_int, u_int, enum snmp_op);
+                         u_int, u_int, enum snmp_op);
 
 struct snmp_node {
-	asn_oid_t oid;
-	const char	*name;		/* name of the leaf */
-	enum snmp_node_type type;	/* type of this node */
-	enum snmp_syntax syntax;
-	snmp_op_t	op;
-	u_int		flags;
-	uint32_t	index;		/* index data */
-	void		*data;		/* application data */
-	void		*tree_data;	/* application data */
+    asn_oid_t oid;
+    const char	*name;		/* name of the leaf */
+    enum snmp_node_type type;	/* type of this node */
+    enum snmp_syntax syntax;
+    snmp_op_t	op;
+    u_int		flags;
+    uint32_t	index;		/* index data */
+    void		*data;		/* application data */
+    void		*tree_data;	/* application data */
 };
 extern struct snmp_node *tree;
 extern u_int  tree_size;
@@ -117,11 +117,11 @@ extern u_int  tree_size;
 	(((V) >> (((I) + 1) * SNMP_INDEX_SHIFT)) & SNMP_INDEX_MASK)
 
 enum {
-	SNMP_TRACE_GET		= 0x00000001,
-	SNMP_TRACE_GETNEXT	= 0x00000002,
-	SNMP_TRACE_SET		= 0x00000004,
-	SNMP_TRACE_DEPEND	= 0x00000008,
-	SNMP_TRACE_FIND		= 0x00000010,
+    SNMP_TRACE_GET		= 0x00000001,
+    SNMP_TRACE_GETNEXT	= 0x00000002,
+    SNMP_TRACE_SET		= 0x00000004,
+    SNMP_TRACE_DEPEND	= 0x00000008,
+    SNMP_TRACE_FIND		= 0x00000010,
 };
 /* trace flag for the following functions */
 extern u_int snmp_trace;
@@ -130,19 +130,19 @@ extern u_int snmp_trace;
 extern void (*snmp_debug)(const char *fmt, ...);
 
 enum snmp_ret snmp_get(snmp_pdu_t *pdu, asn_buf_t *resp_b,
-    snmp_pdu_t *resp, void *);
+                       snmp_pdu_t *resp, void *);
 enum snmp_ret snmp_getnext(snmp_pdu_t *pdu, asn_buf_t *resp_b,
-    snmp_pdu_t *resp, void *);
+                           snmp_pdu_t *resp, void *);
 enum snmp_ret snmp_getbulk(snmp_pdu_t *pdu, asn_buf_t *resp_b,
-    snmp_pdu_t *resp, void *);
+                           snmp_pdu_t *resp, void *);
 enum snmp_ret snmp_set(snmp_pdu_t *pdu, asn_buf_t *resp_b,
-    snmp_pdu_t *resp, void *);
+                       snmp_pdu_t *resp, void *);
 
 enum snmp_ret snmp_make_errresp(const snmp_pdu_t *, asn_buf_t *,
-    asn_buf_t *);
+                                asn_buf_t *);
 
 struct snmp_dependency *snmp_dep_lookup(struct snmp_context *,
-    const asn_oid_t *, const asn_oid_t *, size_t, snmp_depop_t);
+                                        const asn_oid_t *, const asn_oid_t *, size_t, snmp_depop_t);
 
 struct snmp_context *snmp_init_context(void);
 int snmp_dep_commit(struct snmp_context *);

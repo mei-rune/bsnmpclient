@@ -4,7 +4,7 @@
  *	All rights reserved.
  *
  * Author: Harti Brandt <harti@freebsd.org>
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -13,7 +13,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY AUTHOR AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -44,13 +44,13 @@
 #include <string.h>
 
 typedef union asn_u_s {
- 	u_char	*ptr;
- 	const u_char *cptr;
+    u_char	*ptr;
+    const u_char *cptr;
 } asn_u_t;
 
 typedef struct asn_buf {
-	asn_u_t	asn_u;
-	size_t 	asn_len;
+    asn_u_t	asn_u;
+    size_t 	asn_len;
 } asn_buf_t;
 #define asn_cptr	asn_u.cptr
 #define asn_ptr 	asn_u.ptr
@@ -66,23 +66,23 @@ typedef struct asn_buf {
 typedef uint32_t asn_subid_t;
 
 typedef struct asn_oid {
-	u_int	len;
-	asn_subid_t subs[ASN_MAXOIDLEN];
+    u_int	len;
+    asn_subid_t subs[ASN_MAXOIDLEN];
 } asn_oid_t;
 
 enum asn_err {
-	/* conversion was ok */
-	ASN_ERR_OK	= 0,
-	/* conversion failed and stopped */
-	ASN_ERR_FAILED	= 1 | 0x1000,
-	/* length field bad, value skipped */
-	ASN_ERR_BADLEN	= 2,
-	/* out of buffer, stopped */
-	ASN_ERR_EOBUF	= 3 | 0x1000,
-	/* length ok, but value is out of range */
-	ASN_ERR_RANGE	= 4,
-	/* not the expected tag, stopped */
-	ASN_ERR_TAG	= 5 | 0x1000,
+    /* conversion was ok */
+    ASN_ERR_OK	= 0,
+    /* conversion failed and stopped */
+    ASN_ERR_FAILED	= 1 | 0x1000,
+    /* length field bad, value skipped */
+    ASN_ERR_BADLEN	= 2,
+    /* out of buffer, stopped */
+    ASN_ERR_EOBUF	= 3 | 0x1000,
+    /* length ok, but value is out of range */
+    ASN_ERR_RANGE	= 4,
+    /* not the expected tag, stopped */
+    ASN_ERR_TAG	= 5 | 0x1000,
 };
 #define ASN_ERR_STOPPED(E) (((E) & 0x1000) != 0)
 
@@ -163,31 +163,31 @@ char *asn_oid2str_r(const asn_oid_t *, char *);
 char *asn_oid2str(const asn_oid_t *);
 
 enum {
-	ASN_TYPE_BOOLEAN	= 0x01,
-	ASN_TYPE_INTEGER	= 0x02,
-	ASN_TYPE_BITSTRING	= 0x03,
-	ASN_TYPE_OCTETSTRING	= 0x04,
-	ASN_TYPE_NULL		= 0x05,
-	ASN_TYPE_OBJID		= 0x06,
-	ASN_TYPE_SEQUENCE	= 0x10,
+    ASN_TYPE_BOOLEAN	= 0x01,
+    ASN_TYPE_INTEGER	= 0x02,
+    ASN_TYPE_BITSTRING	= 0x03,
+    ASN_TYPE_OCTETSTRING	= 0x04,
+    ASN_TYPE_NULL		= 0x05,
+    ASN_TYPE_OBJID		= 0x06,
+    ASN_TYPE_SEQUENCE	= 0x10,
 
-	ASN_TYPE_CONSTRUCTED	= 0x20,
-	ASN_CLASS_UNIVERSAL	= 0x00,
-	ASN_CLASS_APPLICATION	= 0x40,
-	ASN_CLASS_CONTEXT	= 0x80,
-	ASN_CLASS_PRIVATE	= 0xc0,
-	ASN_TYPE_MASK		= 0x1f,
+    ASN_TYPE_CONSTRUCTED	= 0x20,
+    ASN_CLASS_UNIVERSAL	= 0x00,
+    ASN_CLASS_APPLICATION	= 0x40,
+    ASN_CLASS_CONTEXT	= 0x80,
+    ASN_CLASS_PRIVATE	= 0xc0,
+    ASN_TYPE_MASK		= 0x1f,
 
-	ASN_APP_IPADDRESS	= 0x00,
-	ASN_APP_COUNTER		= 0x01,
-	ASN_APP_GAUGE		= 0x02,
-	ASN_APP_TIMETICKS	= 0x03,
-	ASN_APP_OPAQUE		= 0x04,	/* not implemented */
-	ASN_APP_COUNTER64	= 0x06,
+    ASN_APP_IPADDRESS	= 0x00,
+    ASN_APP_COUNTER		= 0x01,
+    ASN_APP_GAUGE		= 0x02,
+    ASN_APP_TIMETICKS	= 0x03,
+    ASN_APP_OPAQUE		= 0x04,	/* not implemented */
+    ASN_APP_COUNTER64	= 0x06,
 
-	ASN_EXCEPT_NOSUCHOBJECT	= 0x00,
-	ASN_EXCEPT_NOSUCHINSTANCE = 0x01,
-	ASN_EXCEPT_ENDOFMIBVIEW	= 0x02,
+    ASN_EXCEPT_NOSUCHOBJECT	= 0x00,
+    ASN_EXCEPT_NOSUCHINSTANCE = 0x01,
+    ASN_EXCEPT_ENDOFMIBVIEW	= 0x02,
 };
 
 #endif

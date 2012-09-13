@@ -44,55 +44,53 @@ extern int _getopt_internal (int ___argc, char **___argv,
    of the value of `ordering'.  In the case of RETURN_IN_ORDER, only
    `--' can cause `getopt' to return -1 with `optind' != ARGC.  */
 
-enum __ord
-  {
+enum __ord {
     REQUIRE_ORDER, PERMUTE, RETURN_IN_ORDER
-  };
+};
 
 /* Data type for reentrant functions.  */
-struct _getopt_data
-{
-  /* These have exactly the same meaning as the corresponding global
-     variables, except that they are used for the reentrant
-     versions of getopt.  */
-  int optind;
-  int opterr;
-  int optopt;
-  char *optarg;
+struct _getopt_data {
+    /* These have exactly the same meaning as the corresponding global
+       variables, except that they are used for the reentrant
+       versions of getopt.  */
+    int optind;
+    int opterr;
+    int optopt;
+    char *optarg;
 
-  /* Internal members.  */
+    /* Internal members.  */
 
-  /* True if the internal members have been initialized.  */
-  int __initialized;
+    /* True if the internal members have been initialized.  */
+    int __initialized;
 
-  /* The next char to be scanned in the option-element
-     in which the last option character we returned was found.
-     This allows us to pick up the scan where we left off.
+    /* The next char to be scanned in the option-element
+       in which the last option character we returned was found.
+       This allows us to pick up the scan where we left off.
 
-     If this is zero, or a null string, it means resume the scan
-     by advancing to the next ARGV-element.  */
-  char *__nextchar;
+       If this is zero, or a null string, it means resume the scan
+       by advancing to the next ARGV-element.  */
+    char *__nextchar;
 
-  /* See __ord above.  */
-  enum __ord __ordering;
+    /* See __ord above.  */
+    enum __ord __ordering;
 
-  /* If the POSIXLY_CORRECT environment variable is set
-     or getopt was called.  */
-  int __posixly_correct;
+    /* If the POSIXLY_CORRECT environment variable is set
+       or getopt was called.  */
+    int __posixly_correct;
 
 
-  /* Handle permutation of arguments.  */
+    /* Handle permutation of arguments.  */
 
-  /* Describe the part of ARGV that contains non-options that have
-     been skipped.  `first_nonopt' is the index in ARGV of the first
-     of them; `last_nonopt' is the index after the last of them.  */
+    /* Describe the part of ARGV that contains non-options that have
+       been skipped.  `first_nonopt' is the index in ARGV of the first
+       of them; `last_nonopt' is the index after the last of them.  */
 
-  int __first_nonopt;
-  int __last_nonopt;
+    int __first_nonopt;
+    int __last_nonopt;
 
 #if defined _LIBC && defined USE_NONOPTION_FLAGS
-  int __nonoption_flags_max_len;
-  int __nonoption_flags_len;
+    int __nonoption_flags_max_len;
+    int __nonoption_flags_len;
 # endif
 };
 

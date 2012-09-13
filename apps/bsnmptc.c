@@ -33,7 +33,7 @@
 
 
 #ifndef _WIN32
-#include <sys/param.h> 
+#include <sys/param.h>
 #include <sys/socket.h>
 #include <sys/uio.h>
 #include <err.h>
@@ -53,6 +53,11 @@
 #include <bsnmp/snmp.h>
 #include "bsnmptc.h"
 #include "bsnmptools.h"
+
+
+#ifndef HAVE_INET_NTOP
+const char *inet_ntop(int af, const void *src, char *dst, size_t size);
+#endif
 
 /* OctetString, DisplayString */
 static uint8_t *snmp_oct2str(uint32_t, uint8_t *, uint8_t *);
@@ -94,179 +99,196 @@ static char *snmp_bits2oct(char *str, asn_oid_t *oid);
 static int32_t parse_bits(snmp_value_t *value, char *string);
 
 struct snmp_text_conv {
-	enum snmp_tc	tc;
-	const char	*tc_str;
-	int32_t		len;
-	snmp_oct2tc_f	oct2tc;
-	snmp_tc2oid_f	tc2oid;
-	snmp_tc2oct_f	tc2oct;
+    enum snmp_tc	tc;
+    const char	*tc_str;
+    int32_t		len;
+    snmp_oct2tc_f	oct2tc;
+    snmp_tc2oid_f	tc2oid;
+    snmp_tc2oct_f	tc2oct;
 } text_convs[] = {
-	{ SNMP_STRING, "OctetString", SNMP_VAR_STRSZ,
-	  snmp_oct2str, snmp_str2asn_oid, parse_octetstring },
+    {
+        SNMP_STRING, "OctetString", SNMP_VAR_STRSZ,
+        snmp_oct2str, snmp_str2asn_oid, parse_octetstring
+    },
 
-	{ SNMP_DISPLAYSTRING, "DisplayString" , SNMP_VAR_STRSZ,
-	  snmp_oct2str, snmp_str2asn_oid, parse_octetstring },
+    {
+        SNMP_DISPLAYSTRING, "DisplayString" , SNMP_VAR_STRSZ,
+        snmp_oct2str, snmp_str2asn_oid, parse_octetstring
+    },
 
-	{ SNMP_DATEANDTIME, "DateAndTime", SNMP_DATETIME_STRSZ,
-	  snmp_octstr2date, snmp_date2asn_oid, parse_dateandtime },
+    {
+        SNMP_DATEANDTIME, "DateAndTime", SNMP_DATETIME_STRSZ,
+        snmp_octstr2date, snmp_date2asn_oid, parse_dateandtime
+    },
 
-	{ SNMP_PHYSADDR, "PhysAddress", SNMP_PHYSADDR_STRSZ,
-	  snmp_oct2physAddr, snmp_addr2asn_oid, parse_physaddress },
+    {
+        SNMP_PHYSADDR, "PhysAddress", SNMP_PHYSADDR_STRSZ,
+        snmp_oct2physAddr, snmp_addr2asn_oid, parse_physaddress
+    },
 
-	{ SNMP_ATMESI, "AtmESI", SNMP_PHYSADDR_STRSZ,
-	  snmp_oct2physAddr, snmp_addr2asn_oid, parse_physaddress },
+    {
+        SNMP_ATMESI, "AtmESI", SNMP_PHYSADDR_STRSZ,
+        snmp_oct2physAddr, snmp_addr2asn_oid, parse_physaddress
+    },
 
-	{ SNMP_NTP_TIMESTAMP, "NTPTimeStamp", SNMP_NTP_TS_STRSZ,
-	  snmp_oct2ntp_ts, snmp_ntp_ts2asn_oid, parse_ntp_ts },
+    {
+        SNMP_NTP_TIMESTAMP, "NTPTimeStamp", SNMP_NTP_TS_STRSZ,
+        snmp_oct2ntp_ts, snmp_ntp_ts2asn_oid, parse_ntp_ts
+    },
 
-	{ SNMP_MACADDRESS, "MacAddress", SNMP_PHYSADDR_STRSZ,
-	  snmp_oct2physAddr, snmp_addr2asn_oid, parse_physaddress },
+    {
+        SNMP_MACADDRESS, "MacAddress", SNMP_PHYSADDR_STRSZ,
+        snmp_oct2physAddr, snmp_addr2asn_oid, parse_physaddress
+    },
 
-	{ SNMP_BRIDGE_ID, "BridgeId", SNMP_BRIDGEID_STRSZ,
-	  snmp_oct2bridgeid, snmp_bridgeid2oct, parse_bridge_id },
+    {
+        SNMP_BRIDGE_ID, "BridgeId", SNMP_BRIDGEID_STRSZ,
+        snmp_oct2bridgeid, snmp_bridgeid2oct, parse_bridge_id
+    },
 
-	{ SNMP_BPORT_ID, "BridgePortId", SNMP_BPORT_STRSZ,
-	  snmp_oct2bport_id, snmp_bport_id2oct, parse_bport_id },
+    {
+        SNMP_BPORT_ID, "BridgePortId", SNMP_BPORT_STRSZ,
+        snmp_oct2bport_id, snmp_bport_id2oct, parse_bport_id
+    },
 
-	{ SNMP_INETADDRESS, "InetAddress", SNMP_INADDRS_STRSZ,
-	  snmp_oct2inetaddr, snmp_inetaddr2oct, parse_inetaddr },
+    {
+        SNMP_INETADDRESS, "InetAddress", SNMP_INADDRS_STRSZ,
+        snmp_oct2inetaddr, snmp_inetaddr2oct, parse_inetaddr
+    },
 
-	{ SNMP_TC_OWN, "BITS", SNMP_VAR_STRSZ,
-	  snmp_oct2bits, snmp_bits2oct, parse_bits },
+    {
+        SNMP_TC_OWN, "BITS", SNMP_VAR_STRSZ,
+        snmp_oct2bits, snmp_bits2oct, parse_bits
+    },
 
-	{ SNMP_UNKNOWN, "Unknown", SNMP_VAR_STRSZ, snmp_oct2str,
-	  snmp_str2asn_oid, parse_octetstring }	/* keep last */
+    {
+        SNMP_UNKNOWN, "Unknown", SNMP_VAR_STRSZ, snmp_oct2str,
+        snmp_str2asn_oid, parse_octetstring
+    }	/* keep last */
 };
 
 /* Common API */
 enum snmp_tc
-snmp_get_tc(char *str)
-{
-	int i;
-	for (i = 0; i < SNMP_UNKNOWN; i++) {
-		if (!strncmp(text_convs[i].tc_str, str,
-		    strlen(text_convs[i].tc_str)))
-			return (text_convs[i].tc);
-	}
+snmp_get_tc(char *str) {
+    int i;
+    for (i = 0; i < SNMP_UNKNOWN; i++) {
+        if (!strncmp(text_convs[i].tc_str, str,
+                     strlen(text_convs[i].tc_str)))
+            return (text_convs[i].tc);
+    }
 
-	return (SNMP_STRING);
+    return (SNMP_STRING);
 }
 
 char *
-snmp_oct2tc(enum snmp_tc tc, uint32_t len, char *octets)
-{
-	uint32_t tc_len;
-	char * buf;
+snmp_oct2tc(enum snmp_tc tc, uint32_t len, char *octets) {
+    uint32_t tc_len;
+    char * buf;
 
-	if (tc < 0 || tc > SNMP_UNKNOWN)
-		tc = SNMP_UNKNOWN;
+    if (tc < 0 || tc > SNMP_UNKNOWN)
+        tc = SNMP_UNKNOWN;
 
-	if (text_convs[tc].len > 0)
-		tc_len = text_convs[tc].len;
-	else
-		tc_len = len;
+    if (text_convs[tc].len > 0)
+        tc_len = text_convs[tc].len;
+    else
+        tc_len = len;
 
-	if ((buf = malloc(tc_len)) == NULL ) {
-		return (NULL);
-	}
+    if ((buf = malloc(tc_len)) == NULL ) {
+        return (NULL);
+    }
 
-	memset(buf, 0, tc_len);
-	if (text_convs[tc].oct2tc(len, octets, buf) == NULL) {
-		free(buf);
-		return (NULL);
-	}
+    memset(buf, 0, tc_len);
+    if (text_convs[tc].oct2tc(len, octets, buf) == NULL) {
+        free(buf);
+        return (NULL);
+    }
 
-	return (buf);
+    return (buf);
 }
 
 char *
-snmp_tc2oid(enum snmp_tc tc, char *str, asn_oid_t *oid)
-{
-	if (tc < 0 || tc > SNMP_UNKNOWN)
-		tc = SNMP_UNKNOWN;
+snmp_tc2oid(enum snmp_tc tc, char *str, asn_oid_t *oid) {
+    if (tc < 0 || tc > SNMP_UNKNOWN)
+        tc = SNMP_UNKNOWN;
 
-	return (text_convs[tc].tc2oid(str, oid));
+    return (text_convs[tc].tc2oid(str, oid));
 }
 
 int32_t
-snmp_tc2oct(enum snmp_tc tc, snmp_value_t *value, char *string)
-{
-	if (tc < 0 || tc > SNMP_UNKNOWN)
-		tc = SNMP_UNKNOWN;
+snmp_tc2oct(enum snmp_tc tc, snmp_value_t *value, char *string) {
+    if (tc < 0 || tc > SNMP_UNKNOWN)
+        tc = SNMP_UNKNOWN;
 
-	return (text_convs[tc].tc2oct(value, string));
+    return (text_convs[tc].tc2oct(value, string));
 }
 
 /*****************************************************
 * Basic OctetString type.
 */
 static uint8_t *
-snmp_oct2str(uint32_t len, uint8_t *octets, uint8_t *buf)
-{
-	uint32_t i;
-	uint8_t *ptr;
+snmp_oct2str(uint32_t len, uint8_t *octets, uint8_t *buf) {
+    uint32_t i;
+    uint8_t *ptr;
 
-	if (len > MAX_OCTSTRING_LEN || octets == NULL || buf == NULL)
-		return (NULL);
+    if (len > MAX_OCTSTRING_LEN || octets == NULL || buf == NULL)
+        return (NULL);
 
-	for (ptr = buf, i = 0; i < len; i++)
-		if (isprint(octets[i]))
-			ptr += sprintf(ptr, "%c", octets[i]);
-		else
-			ptr += sprintf(ptr, "*");
+    for (ptr = buf, i = 0; i < len; i++)
+        if (isprint(octets[i]))
+            ptr += sprintf(ptr, "%c", octets[i]);
+        else
+            ptr += sprintf(ptr, "*");
 
-	return (buf);
+    return (buf);
 }
 
 static char *
-snmp_str2asn_oid(char *str, asn_oid_t *oid)
-{
-	uint32_t i, len = 0;
+snmp_str2asn_oid(char *str, asn_oid_t *oid) {
+    uint32_t i, len = 0;
 
-	/*
-	 * OctetStrings are allowed max length of ASN_MAXOCTETSTRING,
-	 * but trying to index an entry with such a long OctetString
-	 * will fail anyway.
-	 */
-	for (len = 0; len < ASN_MAXOIDLEN; len++) {
-		if (strchr(",]", *(str + len)) != NULL)
-			break;
-	}
+    /*
+     * OctetStrings are allowed max length of ASN_MAXOCTETSTRING,
+     * but trying to index an entry with such a long OctetString
+     * will fail anyway.
+     */
+    for (len = 0; len < ASN_MAXOIDLEN; len++) {
+        if (strchr(",]", *(str + len)) != NULL)
+            break;
+    }
 
-	if (len >= ASN_MAXOIDLEN)
-		return (NULL);
+    if (len >= ASN_MAXOIDLEN)
+        return (NULL);
 
-	if (snmp_suboid_append(oid, (asn_subid_t) len) < 0)
-		return (NULL);
+    if (snmp_suboid_append(oid, (asn_subid_t) len) < 0)
+        return (NULL);
 
-	for (i = 0; i < len; i++)
-		if (snmp_suboid_append(oid, (asn_subid_t) *(str + i)) < 0)
-			return (NULL);
+    for (i = 0; i < len; i++)
+        if (snmp_suboid_append(oid, (asn_subid_t) *(str + i)) < 0)
+            return (NULL);
 
-	return (str + len);
+    return (str + len);
 }
 
 static int32_t
-parse_octetstring(snmp_value_t *value, char *val)
-{
-	size_t len;
+parse_octetstring(snmp_value_t *value, char *val) {
+    size_t len;
 
-	if ((len = strlen(val)) >= MAX_OCTSTRING_LEN) {
-		warnx("Octetstring too long - %d is max allowed",
-		    MAX_OCTSTRING_LEN - 1);
-		return (-1);
-	}
+    if ((len = strlen(val)) >= MAX_OCTSTRING_LEN) {
+        warnx("Octetstring too long - %d is max allowed",
+              MAX_OCTSTRING_LEN - 1);
+        return (-1);
+    }
 
-	value->v.octetstring.len = len;
+    value->v.octetstring.len = len;
 
-	if((value->v.octetstring.octets = malloc(len)) == NULL) {
-		return (-1);
-	}
+    if((value->v.octetstring.octets = malloc(len)) == NULL) {
+        return (-1);
+    }
 
-	memcpy(value->v.octetstring.octets, val, len);
-	value->syntax = SNMP_SYNTAX_OCTETSTRING;
+    memcpy(value->v.octetstring.octets, val, len);
+    value->syntax = SNMP_SYNTAX_OCTETSTRING;
 
-	return (0);
+    return (0);
 }
 
 /*************************************************************
@@ -303,370 +325,364 @@ parse_octetstring(snmp_value_t *value, char *val)
  *		1992-5-26,13:30:15.0,-4:0
  */
 static uint8_t *
-snmp_octstr2date(uint32_t len, uint8_t *octets, uint8_t *buf)
-{
-	int year;
-	uint8_t *ptr;
+snmp_octstr2date(uint32_t len, uint8_t *octets, uint8_t *buf) {
+    int year;
+    uint8_t *ptr;
 
-	if (len != SNMP_DATETIME_OCTETS || octets == NULL || buf == NULL)
-		return (NULL);
+    if (len != SNMP_DATETIME_OCTETS || octets == NULL || buf == NULL)
+        return (NULL);
 
-	buf[0]= '\0';
-	year = (octets[0] << 8);
-	year += (octets[1]);
+    buf[0]= '\0';
+    year = (octets[0] << 8);
+    year += (octets[1]);
 
-	ptr = buf;
-	ptr += sprintf(ptr, "%4.4d-%.2d-%.2d, ", year, octets[2],octets[3]);
-	ptr += sprintf(ptr, "%2.2d:%2.2d:%2.2d.%.2d, ", octets[4],octets[5],
-	    octets[6],octets[7]);
-	ptr += sprintf(ptr, "%c%.2d:%.2d", octets[8],octets[9],octets[10]);
+    ptr = buf;
+    ptr += sprintf(ptr, "%4.4d-%.2d-%.2d, ", year, octets[2],octets[3]);
+    ptr += sprintf(ptr, "%2.2d:%2.2d:%2.2d.%.2d, ", octets[4],octets[5],
+                   octets[6],octets[7]);
+    ptr += sprintf(ptr, "%c%.2d:%.2d", octets[8],octets[9],octets[10]);
 
-	return (buf);
+    return (buf);
 }
 
 static char *
-snmp_date2asn_oid(char *str, asn_oid_t *oid)
-{
-	char *endptr, *ptr;
-	uint32_t v;
-	int32_t saved_errno;
+snmp_date2asn_oid(char *str, asn_oid_t *oid) {
+    char *endptr, *ptr;
+    uint32_t v;
+    int32_t saved_errno;
 
-	if (snmp_suboid_append(oid, (asn_subid_t) SNMP_DATETIME_OCTETS) < 0)
-		return (NULL);
+    if (snmp_suboid_append(oid, (asn_subid_t) SNMP_DATETIME_OCTETS) < 0)
+        return (NULL);
 
-	/* Read 'YYYY-' and write it in two subs. */
-	ptr = str;
-	saved_errno = errno;
-	errno = 0;
-	v = strtoul(ptr, &endptr, 10);
-	if (v > 0xffff)
-		goto error;
-	else
-		errno = saved_errno;
-	if (*endptr != '-')
-		goto error1;
-	if (snmp_suboid_append(oid, (asn_subid_t) ((v & 0xff00) >> 8)) < 0)
-		return (NULL);
-	if (snmp_suboid_append(oid, (asn_subid_t) (v & 0xff)) < 0)
-		return (NULL);
+    /* Read 'YYYY-' and write it in two subs. */
+    ptr = str;
+    saved_errno = errno;
+    errno = 0;
+    v = strtoul(ptr, &endptr, 10);
+    if (v > 0xffff)
+        goto error;
+    else
+        errno = saved_errno;
+    if (*endptr != '-')
+        goto error1;
+    if (snmp_suboid_append(oid, (asn_subid_t) ((v & 0xff00) >> 8)) < 0)
+        return (NULL);
+    if (snmp_suboid_append(oid, (asn_subid_t) (v & 0xff)) < 0)
+        return (NULL);
 
-	/* 'MM-' */
-	ptr = endptr + 1;
-	saved_errno = errno;
-	v = strtoul(ptr, &endptr, 10);
-	if (errno != 0)
-		goto error;
-	else
-		errno = saved_errno;
-	if (*endptr != '-')
-		goto error1;
-	if (snmp_suboid_append(oid, (asn_subid_t) v) < 0)
-		return (NULL);
+    /* 'MM-' */
+    ptr = endptr + 1;
+    saved_errno = errno;
+    v = strtoul(ptr, &endptr, 10);
+    if (errno != 0)
+        goto error;
+    else
+        errno = saved_errno;
+    if (*endptr != '-')
+        goto error1;
+    if (snmp_suboid_append(oid, (asn_subid_t) v) < 0)
+        return (NULL);
 
-	/* 'DD,' */
-	ptr = endptr + 1;
-	saved_errno = errno;
-	v = strtoul(ptr, &endptr, 10);
-	if (errno != 0)
-		goto error;
-	else
-		errno = saved_errno;
-	if (*endptr != '-')
-		goto error1;
-	if (snmp_suboid_append(oid, (asn_subid_t) v) < 0)
-		return (NULL);
+    /* 'DD,' */
+    ptr = endptr + 1;
+    saved_errno = errno;
+    v = strtoul(ptr, &endptr, 10);
+    if (errno != 0)
+        goto error;
+    else
+        errno = saved_errno;
+    if (*endptr != '-')
+        goto error1;
+    if (snmp_suboid_append(oid, (asn_subid_t) v) < 0)
+        return (NULL);
 
-	/* 'HH:' */
-	ptr = endptr + 1;
-	saved_errno = errno;
-	v = strtoul(ptr, &endptr, 10);
-	if (errno != 0)
-		goto error;
-	else
-		errno = saved_errno;
-	if (*endptr != ':')
-		goto error1;
-	if (snmp_suboid_append(oid, (asn_subid_t) v) < 0)
-		return (NULL);
+    /* 'HH:' */
+    ptr = endptr + 1;
+    saved_errno = errno;
+    v = strtoul(ptr, &endptr, 10);
+    if (errno != 0)
+        goto error;
+    else
+        errno = saved_errno;
+    if (*endptr != ':')
+        goto error1;
+    if (snmp_suboid_append(oid, (asn_subid_t) v) < 0)
+        return (NULL);
 
-	/* 'MM:' */
-	ptr = endptr + 1;
-	saved_errno = errno;
-	v = strtoul(ptr, &endptr, 10);
-	if (errno != 0)
-		goto error;
-	else
-		errno = saved_errno;
-	if (*endptr != ':')
-		goto error1;
-	if (snmp_suboid_append(oid, (asn_subid_t) v) < 0)
-		return (NULL);
+    /* 'MM:' */
+    ptr = endptr + 1;
+    saved_errno = errno;
+    v = strtoul(ptr, &endptr, 10);
+    if (errno != 0)
+        goto error;
+    else
+        errno = saved_errno;
+    if (*endptr != ':')
+        goto error1;
+    if (snmp_suboid_append(oid, (asn_subid_t) v) < 0)
+        return (NULL);
 
-	/* 'SS.' */
-	ptr = endptr + 1;
-	saved_errno = errno;
-	v = strtoul(ptr, &endptr, 10);
-	if (errno != 0)
-		goto error;
-	else
-		errno = saved_errno;
-	if (*endptr != '.')
-		goto error1;
-	if (snmp_suboid_append(oid, (asn_subid_t) v) < 0)
-		return (NULL);
+    /* 'SS.' */
+    ptr = endptr + 1;
+    saved_errno = errno;
+    v = strtoul(ptr, &endptr, 10);
+    if (errno != 0)
+        goto error;
+    else
+        errno = saved_errno;
+    if (*endptr != '.')
+        goto error1;
+    if (snmp_suboid_append(oid, (asn_subid_t) v) < 0)
+        return (NULL);
 
-	/* 'M(mseconds),' */
-	ptr = endptr + 1;
-	saved_errno = errno;
-	v = strtoul(ptr, &endptr, 10);
-	if (errno != 0)
-		goto error;
-	else
-		errno = saved_errno;
-	if (*endptr != ',')
-		goto error1;
-	if (snmp_suboid_append(oid, (asn_subid_t) v) < 0)
-		return (NULL);
+    /* 'M(mseconds),' */
+    ptr = endptr + 1;
+    saved_errno = errno;
+    v = strtoul(ptr, &endptr, 10);
+    if (errno != 0)
+        goto error;
+    else
+        errno = saved_errno;
+    if (*endptr != ',')
+        goto error1;
+    if (snmp_suboid_append(oid, (asn_subid_t) v) < 0)
+        return (NULL);
 
-	/* 'UTC' - optional */
-	ptr = endptr + 1;
-	if (*ptr == 'U' && *(ptr + 1) == 'T' && *(ptr + 1) == 'C')
-		ptr += 3;
+    /* 'UTC' - optional */
+    ptr = endptr + 1;
+    if (*ptr == 'U' && *(ptr + 1) == 'T' && *(ptr + 1) == 'C')
+        ptr += 3;
 
-	/* '+/-' */
-	if (*ptr == '-' || *ptr == '+') {
-		if (snmp_suboid_append(oid, (asn_subid_t) (*ptr)) < 0)
-			return (NULL);
-	} else
-		goto error1;
+    /* '+/-' */
+    if (*ptr == '-' || *ptr == '+') {
+        if (snmp_suboid_append(oid, (asn_subid_t) (*ptr)) < 0)
+            return (NULL);
+    } else
+        goto error1;
 
-	/* 'HH:' */
-	ptr = endptr + 1;
-	saved_errno = errno;
-	v = strtoul(ptr, &endptr, 10);
-	if (errno != 0)
-		goto error;
-	else
-		errno = saved_errno;
-	if (*endptr != ':')
-		goto error1;
-	if (snmp_suboid_append(oid, (asn_subid_t) v) < 0)
-		return (NULL);
+    /* 'HH:' */
+    ptr = endptr + 1;
+    saved_errno = errno;
+    v = strtoul(ptr, &endptr, 10);
+    if (errno != 0)
+        goto error;
+    else
+        errno = saved_errno;
+    if (*endptr != ':')
+        goto error1;
+    if (snmp_suboid_append(oid, (asn_subid_t) v) < 0)
+        return (NULL);
 
-	/* 'MM' - last one - ignore endptr here. */
-	ptr = endptr + 1;
-	saved_errno = errno;
-	v = strtoul(ptr, &endptr, 10);
-	if (errno != 0)
-		goto error;
-	else
-		errno = saved_errno;
-	if (snmp_suboid_append(oid, (asn_subid_t) v) < 0)
-		return (NULL);
+    /* 'MM' - last one - ignore endptr here. */
+    ptr = endptr + 1;
+    saved_errno = errno;
+    v = strtoul(ptr, &endptr, 10);
+    if (errno != 0)
+        goto error;
+    else
+        errno = saved_errno;
+    if (snmp_suboid_append(oid, (asn_subid_t) v) < 0)
+        return (NULL);
 
-	return (endptr);
+    return (endptr);
 
-  error:
-	errno = saved_errno;
-  error1:
-	warnx("Date value %s not supported", str);
-	return (NULL);
+error:
+    errno = saved_errno;
+error1:
+    warnx("Date value %s not supported", str);
+    return (NULL);
 }
 
 /* Read a DateAndTime string eg. 1992-5-26,13:30:15.0,-4:0. */
 static int32_t
-parse_dateandtime(snmp_value_t *sv, char *val)
-{
-	char *endptr;
-	uint32_t v;
-	uint8_t	date[SNMP_DATETIME_OCTETS];
+parse_dateandtime(snmp_value_t *sv, char *val) {
+    char *endptr;
+    uint32_t v;
+    uint8_t	date[SNMP_DATETIME_OCTETS];
 
-	/* 'YYYY-' */
-	v = strtoul(val, &endptr, 10);
-	if (v > 0xffff || *endptr != '-')
-		goto error;
-	date[0] = ((v & 0xff00) >> 8);
-	date[1] = (v & 0xff);
-	val = endptr + 1;
+    /* 'YYYY-' */
+    v = strtoul(val, &endptr, 10);
+    if (v > 0xffff || *endptr != '-')
+        goto error;
+    date[0] = ((v & 0xff00) >> 8);
+    date[1] = (v & 0xff);
+    val = endptr + 1;
 
-	/* 'MM-' */
-	v = strtoul(val, &endptr, 10);
-	if (v == 0 || v > 12 || *endptr != '-')
-		goto error;
-	date[2] = v;
-	val = endptr + 1;
+    /* 'MM-' */
+    v = strtoul(val, &endptr, 10);
+    if (v == 0 || v > 12 || *endptr != '-')
+        goto error;
+    date[2] = v;
+    val = endptr + 1;
 
-	/* 'DD,' */
-	v = strtoul(val, &endptr, 10);
-	if (v == 0 || v > 31 || *endptr != ',')
-		goto error;
-	date[3] = v;
-	val = endptr + 1;
+    /* 'DD,' */
+    v = strtoul(val, &endptr, 10);
+    if (v == 0 || v > 31 || *endptr != ',')
+        goto error;
+    date[3] = v;
+    val = endptr + 1;
 
-	/* 'HH:' */
-	v = strtoul(val, &endptr, 10);
-	if (v > 23 || *endptr != ':')
-		goto error;
-	date[4] = v;
-	val = endptr + 1;
+    /* 'HH:' */
+    v = strtoul(val, &endptr, 10);
+    if (v > 23 || *endptr != ':')
+        goto error;
+    date[4] = v;
+    val = endptr + 1;
 
-	/* 'MM:' */
-	v = strtoul(val, &endptr, 10);
-	if (v > 59 || *endptr != ':')
-		goto error;
-	date[5] = v;
-	val = endptr + 1;
+    /* 'MM:' */
+    v = strtoul(val, &endptr, 10);
+    if (v > 59 || *endptr != ':')
+        goto error;
+    date[5] = v;
+    val = endptr + 1;
 
-	/* 'SS.' */
-	v = strtoul(val, &endptr, 10);
-	if (v > 60 || *endptr != '.')
-		goto error;
-	date[6] = v;
-	val = endptr + 1;
+    /* 'SS.' */
+    v = strtoul(val, &endptr, 10);
+    if (v > 60 || *endptr != '.')
+        goto error;
+    date[6] = v;
+    val = endptr + 1;
 
-	/* '(deci-)s,' */
-	v = strtoul(val, &endptr, 10);
-	if (v > 9 || *endptr != ',')
-		goto error;
-	date[7] = v;
-	val = endptr + 1;
+    /* '(deci-)s,' */
+    v = strtoul(val, &endptr, 10);
+    if (v > 9 || *endptr != ',')
+        goto error;
+    date[7] = v;
+    val = endptr + 1;
 
-	/* offset - '+/-' */
-	if (*val != '-' && *val != '+')
-		goto error;
-	date[8] = (uint8_t) *val;
-	val = endptr + 1;
+    /* offset - '+/-' */
+    if (*val != '-' && *val != '+')
+        goto error;
+    date[8] = (uint8_t) *val;
+    val = endptr + 1;
 
-	/* 'HH:' - offset from UTC */
-	v = strtoul(val, &endptr, 10);
-	if (v > 13 || *endptr != ':')
-		goto error;
-	date[9] = v;
-	val = endptr + 1;
+    /* 'HH:' - offset from UTC */
+    v = strtoul(val, &endptr, 10);
+    if (v > 13 || *endptr != ':')
+        goto error;
+    date[9] = v;
+    val = endptr + 1;
 
-	/* 'MM'\0''  offset from UTC */
-	v = strtoul(val, &endptr, 10);
-	if (v > 59 || *endptr != '\0')
-		goto error;
-	date[10] = v;
+    /* 'MM'\0''  offset from UTC */
+    v = strtoul(val, &endptr, 10);
+    if (v > 59 || *endptr != '\0')
+        goto error;
+    date[10] = v;
 
-	if ((sv->v.octetstring.octets = malloc(SNMP_DATETIME_OCTETS)) == NULL) {
-		warnx("malloc() failed - %s", strerror(errno));
-		return (-1);
-	}
+    if ((sv->v.octetstring.octets = malloc(SNMP_DATETIME_OCTETS)) == NULL) {
+        warnx("malloc() failed - %s", strerror(errno));
+        return (-1);
+    }
 
-	sv->v.octetstring.len = SNMP_DATETIME_OCTETS;
-	memcpy(sv->v.octetstring.octets, date, SNMP_DATETIME_OCTETS);
-	sv->syntax = SNMP_SYNTAX_OCTETSTRING;
-	return (1);
+    sv->v.octetstring.len = SNMP_DATETIME_OCTETS;
+    memcpy(sv->v.octetstring.octets, date, SNMP_DATETIME_OCTETS);
+    sv->syntax = SNMP_SYNTAX_OCTETSTRING;
+    return (1);
 
-  error:
-	warnx("Date value %s not supported", val);
-	return (-1);
+error:
+    warnx("Date value %s not supported", val);
+    return (-1);
 }
 
 /**************************************************************
  * PhysAddress
  */
 static uint8_t *
-snmp_oct2physAddr(uint32_t len, uint8_t *octets, uint8_t *buf)
-{
-	uint8_t *ptr;
-	uint32_t i;
+snmp_oct2physAddr(uint32_t len, uint8_t *octets, uint8_t *buf) {
+    uint8_t *ptr;
+    uint32_t i;
 
-	if (len != SNMP_PHYSADDR_OCTETS || octets == NULL || buf == NULL)
-		return (NULL);
+    if (len != SNMP_PHYSADDR_OCTETS || octets == NULL || buf == NULL)
+        return (NULL);
 
-	buf[0]= '\0';
+    buf[0]= '\0';
 
-	ptr = buf;
-	ptr += sprintf(ptr, "%2.2x", octets[0]);
-	for (i = 1; i < 6; i++)
-		ptr += sprintf(ptr, ":%2.2x", octets[i]);
+    ptr = buf;
+    ptr += sprintf(ptr, "%2.2x", octets[0]);
+    for (i = 1; i < 6; i++)
+        ptr += sprintf(ptr, ":%2.2x", octets[i]);
 
-	return (buf);
+    return (buf);
 }
 
 static char *
-snmp_addr2asn_oid(char *str, asn_oid_t *oid)
-{
-	char *endptr, *ptr;
-	uint32_t v, i;
-	int saved_errno;
+snmp_addr2asn_oid(char *str, asn_oid_t *oid) {
+    char *endptr, *ptr;
+    uint32_t v, i;
+    int saved_errno;
 
-	if (snmp_suboid_append(oid, (asn_subid_t) SNMP_PHYSADDR_OCTETS) < 0)
-		return (NULL);
+    if (snmp_suboid_append(oid, (asn_subid_t) SNMP_PHYSADDR_OCTETS) < 0)
+        return (NULL);
 
-	ptr = str;
-	for (i = 0; i < 5; i++) {
-		saved_errno = errno;
-		v = strtoul(ptr, &endptr, 16);
-		errno = saved_errno;
-		if (v > 0xff) {
-			warnx("Integer value %s not supported", str);
-			return (NULL);
-		}
-		if (*endptr != ':') {
-			warnx("Failed adding oid - %s",str);
-			return (NULL);
-		}
-		if (snmp_suboid_append(oid, (asn_subid_t) v) < 0)
-			return (NULL);
-		ptr = endptr + 1;
-	}
+    ptr = str;
+    for (i = 0; i < 5; i++) {
+        saved_errno = errno;
+        v = strtoul(ptr, &endptr, 16);
+        errno = saved_errno;
+        if (v > 0xff) {
+            warnx("Integer value %s not supported", str);
+            return (NULL);
+        }
+        if (*endptr != ':') {
+            warnx("Failed adding oid - %s",str);
+            return (NULL);
+        }
+        if (snmp_suboid_append(oid, (asn_subid_t) v) < 0)
+            return (NULL);
+        ptr = endptr + 1;
+    }
 
-	/* The last one - don't check the ending char here. */
-	saved_errno = errno;
-	v = strtoul(ptr, &endptr, 16);
-	errno = saved_errno;
-	if (v > 0xff) {
-		warnx("Integer value %s not supported", str);
-		return (NULL);
-	}
-	if (snmp_suboid_append(oid, (asn_subid_t) v) < 0)
-		return (NULL);
+    /* The last one - don't check the ending char here. */
+    saved_errno = errno;
+    v = strtoul(ptr, &endptr, 16);
+    errno = saved_errno;
+    if (v > 0xff) {
+        warnx("Integer value %s not supported", str);
+        return (NULL);
+    }
+    if (snmp_suboid_append(oid, (asn_subid_t) v) < 0)
+        return (NULL);
 
-	return (endptr);
+    return (endptr);
 }
 
 static int32_t
-parse_physaddress(snmp_value_t *sv, char *val)
-{
-	char *endptr;
-	int32_t i;
-	uint32_t v;
-	uint8_t	phys_addr[SNMP_PHYSADDR_OCTETS];
+parse_physaddress(snmp_value_t *sv, char *val) {
+    char *endptr;
+    int32_t i;
+    uint32_t v;
+    uint8_t	phys_addr[SNMP_PHYSADDR_OCTETS];
 
-	for (i = 0; i < 5; i++) {
-		v = strtoul(val, &endptr, 16);
-		if (v > 0xff) {
-			warnx("Integer value %s not supported", val);
-			return (-1);
-		}
-		if(*endptr != ':') {
-			warnx("Failed reading octet - %s", val);
-			return (-1);
-		}
-		phys_addr[i] = v;
-		val = endptr + 1;
-	}
+    for (i = 0; i < 5; i++) {
+        v = strtoul(val, &endptr, 16);
+        if (v > 0xff) {
+            warnx("Integer value %s not supported", val);
+            return (-1);
+        }
+        if(*endptr != ':') {
+            warnx("Failed reading octet - %s", val);
+            return (-1);
+        }
+        phys_addr[i] = v;
+        val = endptr + 1;
+    }
 
-	/* The last one - don't check the ending char here. */
-	v = strtoul(val, &endptr, 16);
-	if (v > 0xff) {
-		warnx("Integer value %s not supported", val);
-		return (-1);
-	}
-	phys_addr[5] = v;
+    /* The last one - don't check the ending char here. */
+    v = strtoul(val, &endptr, 16);
+    if (v > 0xff) {
+        warnx("Integer value %s not supported", val);
+        return (-1);
+    }
+    phys_addr[5] = v;
 
-	if ((sv->v.octetstring.octets = malloc(SNMP_PHYSADDR_OCTETS)) == NULL) {
-		return (-1);
-	}
+    if ((sv->v.octetstring.octets = malloc(SNMP_PHYSADDR_OCTETS)) == NULL) {
+        return (-1);
+    }
 
-	sv->v.octetstring.len = SNMP_PHYSADDR_OCTETS;
-	memcpy(sv->v.octetstring.octets, phys_addr, SNMP_PHYSADDR_OCTETS);
-	sv->syntax = SNMP_SYNTAX_OCTETSTRING;
-	return (1);
+    sv->v.octetstring.len = SNMP_PHYSADDR_OCTETS;
+    memcpy(sv->v.octetstring.octets, phys_addr, SNMP_PHYSADDR_OCTETS);
+    sv->syntax = SNMP_SYNTAX_OCTETSTRING;
+    return (1);
 }
 
 /**************************************************************
@@ -681,132 +697,129 @@ parse_physaddress(snmp_value_t *sv, char *val)
  *    SYNTAX	OCTET STRING (SIZE(8))
  */
 static uint8_t *
-snmp_oct2ntp_ts(uint32_t len, uint8_t *octets, uint8_t *buf)
-{
-	uint8_t *ptr;
-	uint32_t i;
+snmp_oct2ntp_ts(uint32_t len, uint8_t *octets, uint8_t *buf) {
+    uint8_t *ptr;
+    uint32_t i;
 
-	if (len != SNMP_NTP_TS_OCTETS || octets == NULL || buf == NULL)
-		return (NULL);
+    if (len != SNMP_NTP_TS_OCTETS || octets == NULL || buf == NULL)
+        return (NULL);
 
-	buf[0]= '\0';
+    buf[0]= '\0';
 
-	ptr = buf;
-	i = octets[0] * 1000 + octets[1] * 100 + octets[2] * 10 + octets[3];
-	ptr += sprintf(ptr, "%4.4d", i);
-	i = octets[4] * 1000 + octets[5] * 100 + octets[6] * 10 + octets[7];
-	ptr += sprintf(ptr, ".%4.4d", i);
+    ptr = buf;
+    i = octets[0] * 1000 + octets[1] * 100 + octets[2] * 10 + octets[3];
+    ptr += sprintf(ptr, "%4.4d", i);
+    i = octets[4] * 1000 + octets[5] * 100 + octets[6] * 10 + octets[7];
+    ptr += sprintf(ptr, ".%4.4d", i);
 
-	return (buf);
+    return (buf);
 }
 
 static char *
-snmp_ntp_ts2asn_oid(char *str, asn_oid_t *oid)
-{
-	char *endptr, *ptr;
-	uint32_t v, i, d;
-	asn_oid_t suboid;
-	int saved_errno;
+snmp_ntp_ts2asn_oid(char *str, asn_oid_t *oid) {
+    char *endptr, *ptr;
+    uint32_t v, i, d;
+    asn_oid_t suboid;
+    int saved_errno;
 
-	if (snmp_suboid_append(oid, (asn_subid_t) SNMP_NTP_TS_OCTETS) < 0)
-		return (NULL);
+    if (snmp_suboid_append(oid, (asn_subid_t) SNMP_NTP_TS_OCTETS) < 0)
+        return (NULL);
 
-	ptr = str;
-	saved_errno = errno;
-	v = strtoul(ptr, &endptr, 10);
-	if (errno != 0 || (v / 1000) > 9) {
-		warnx("Integer value %s not supported", str);
-		errno = saved_errno;
-		return (NULL);
-	} else
-		errno = saved_errno;
+    ptr = str;
+    saved_errno = errno;
+    v = strtoul(ptr, &endptr, 10);
+    if (errno != 0 || (v / 1000) > 9) {
+        warnx("Integer value %s not supported", str);
+        errno = saved_errno;
+        return (NULL);
+    } else
+        errno = saved_errno;
 
-	if (*endptr != '.') {
-		warnx("Failed adding oid - %s",str);
-		return (NULL);
-	}
+    if (*endptr != '.') {
+        warnx("Failed adding oid - %s",str);
+        return (NULL);
+    }
 
-	memset(&suboid, 0, sizeof(asn_oid_t));
-	suboid.len = SNMP_NTP_TS_OCTETS;
+    memset(&suboid, 0, sizeof(asn_oid_t));
+    suboid.len = SNMP_NTP_TS_OCTETS;
 
-	for (i = 0, d = 1000; i < 4; i++) {
-		suboid.subs[i] = v / d;
-		v = v % d;
-		d = d / 10;
-	}
+    for (i = 0, d = 1000; i < 4; i++) {
+        suboid.subs[i] = v / d;
+        v = v % d;
+        d = d / 10;
+    }
 
-	ptr = endptr + 1;
-	saved_errno = errno;
-	v = strtoul(ptr, &endptr, 10);
-	if (errno != 0 || (v / 1000) > 9) {
-		warnx("Integer value %s not supported", str);
-		errno = saved_errno;
-		return (NULL);
-	} else
-		errno = saved_errno;
+    ptr = endptr + 1;
+    saved_errno = errno;
+    v = strtoul(ptr, &endptr, 10);
+    if (errno != 0 || (v / 1000) > 9) {
+        warnx("Integer value %s not supported", str);
+        errno = saved_errno;
+        return (NULL);
+    } else
+        errno = saved_errno;
 
-	for (i = 0, d = 1000; i < 4; i++) {
-		suboid.subs[i + 4] = v / d;
-		v = v % d;
-		d = d / 10;
-	}
+    for (i = 0, d = 1000; i < 4; i++) {
+        suboid.subs[i + 4] = v / d;
+        v = v % d;
+        d = d / 10;
+    }
 
-	asn_append_oid(oid, &suboid);
-	return (endptr);
+    asn_append_oid(oid, &suboid);
+    return (endptr);
 }
 
 static int32_t
-parse_ntp_ts(snmp_value_t *sv, char *val)
-{
-	char *endptr;
-	int32_t i, d, saved_errno;
-	uint32_t v;
-	uint8_t	ntp_ts[SNMP_NTP_TS_OCTETS];
+parse_ntp_ts(snmp_value_t *sv, char *val) {
+    char *endptr;
+    int32_t i, d, saved_errno;
+    uint32_t v;
+    uint8_t	ntp_ts[SNMP_NTP_TS_OCTETS];
 
-	saved_errno = errno;
-	v = strtoul(val, &endptr, 10);
-	if (errno != 0 || (v / 1000) > 9) {
-		saved_errno = errno;
-		warnx("Integer value %s not supported", val);
-		return (-1);
-	} else
-		saved_errno = errno;
+    saved_errno = errno;
+    v = strtoul(val, &endptr, 10);
+    if (errno != 0 || (v / 1000) > 9) {
+        saved_errno = errno;
+        warnx("Integer value %s not supported", val);
+        return (-1);
+    } else
+        saved_errno = errno;
 
-	if (*endptr != '.') {
-		warnx("Failed reading octet - %s", val);
-		return (-1);
-	}
+    if (*endptr != '.') {
+        warnx("Failed reading octet - %s", val);
+        return (-1);
+    }
 
-	for (i = 0, d = 1000; i < 4; i++) {
-		ntp_ts[i] = v / d;
-		v = v % d;
-		d = d / 10;
-	}
-	val = endptr + 1;
+    for (i = 0, d = 1000; i < 4; i++) {
+        ntp_ts[i] = v / d;
+        v = v % d;
+        d = d / 10;
+    }
+    val = endptr + 1;
 
-	saved_errno = errno;
-	v = strtoul(val, &endptr, 10);
-	if (errno != 0 || (v / 1000) > 9) {
-		saved_errno = errno;
-		warnx("Integer value %s not supported", val);
-		return (-1);
-	} else
-		saved_errno = errno;
+    saved_errno = errno;
+    v = strtoul(val, &endptr, 10);
+    if (errno != 0 || (v / 1000) > 9) {
+        saved_errno = errno;
+        warnx("Integer value %s not supported", val);
+        return (-1);
+    } else
+        saved_errno = errno;
 
-	for (i = 0, d = 1000; i < 4; i++) {
-		ntp_ts[i + 4] = v / d;
-		v = v % d;
-		d = d / 10;
-	}
+    for (i = 0, d = 1000; i < 4; i++) {
+        ntp_ts[i + 4] = v / d;
+        v = v % d;
+        d = d / 10;
+    }
 
-	if ((sv->v.octetstring.octets = malloc(SNMP_NTP_TS_OCTETS)) == NULL) {
-		return (-1);
-	}
+    if ((sv->v.octetstring.octets = malloc(SNMP_NTP_TS_OCTETS)) == NULL) {
+        return (-1);
+    }
 
-	sv->v.octetstring.len = SNMP_NTP_TS_OCTETS;
-	memcpy(sv->v.octetstring.octets, ntp_ts, SNMP_NTP_TS_OCTETS);
-	sv->syntax = SNMP_SYNTAX_OCTETSTRING;
-	return (1);
+    sv->v.octetstring.len = SNMP_NTP_TS_OCTETS;
+    memcpy(sv->v.octetstring.octets, ntp_ts, SNMP_NTP_TS_OCTETS);
+    sv->syntax = SNMP_SYNTAX_OCTETSTRING;
+    return (1);
 }
 
 /**************************************************************
@@ -826,149 +839,146 @@ parse_ntp_ts(snmp_value_t *sv, char *val)
  *    SYNTAX	OCTET STRING (SIZE (8))
  */
 static uint8_t *
-snmp_oct2bridgeid(uint32_t len, uint8_t *octets, uint8_t *buf)
-{
-	uint8_t *ptr;
-	uint32_t i, priority;
+snmp_oct2bridgeid(uint32_t len, uint8_t *octets, uint8_t *buf) {
+    uint8_t *ptr;
+    uint32_t i, priority;
 
-	if (len != SNMP_BRIDGEID_OCTETS || octets == NULL || buf == NULL)
-		return (NULL);
+    if (len != SNMP_BRIDGEID_OCTETS || octets == NULL || buf == NULL)
+        return (NULL);
 
-	buf[0]= '\0';
-	ptr = buf;
+    buf[0]= '\0';
+    ptr = buf;
 
-	priority = octets[0] << 8;
-	priority += octets[1];
-	if (priority > SNMP_MAX_BRIDGE_PRIORITY) {
-		warnx("Invalid bridge priority %d", priority);
-		return (NULL);
-	} else
-		ptr += sprintf(ptr, "%d.", octets[0]);
+    priority = octets[0] << 8;
+    priority += octets[1];
+    if (priority > SNMP_MAX_BRIDGE_PRIORITY) {
+        warnx("Invalid bridge priority %d", priority);
+        return (NULL);
+    } else
+        ptr += sprintf(ptr, "%d.", octets[0]);
 
-	ptr += sprintf(ptr, "%2.2x", octets[2]);
+    ptr += sprintf(ptr, "%2.2x", octets[2]);
 
-	for (i = 1; i < 6; i++)
-		ptr += sprintf(ptr, ":%2.2x", octets[i + 2]);
+    for (i = 1; i < 6; i++)
+        ptr += sprintf(ptr, ":%2.2x", octets[i + 2]);
 
-	return (buf);
+    return (buf);
 }
 
 static char *
-snmp_bridgeid2oct(char *str, asn_oid_t *oid)
-{
-	char *endptr, *ptr;
-	uint32_t v, i;
-	int32_t saved_errno;
+snmp_bridgeid2oct(char *str, asn_oid_t *oid) {
+    char *endptr, *ptr;
+    uint32_t v, i;
+    int32_t saved_errno;
 
-	if (snmp_suboid_append(oid, (asn_subid_t) SNMP_BRIDGEID_OCTETS) < 0)
-		return (NULL);
+    if (snmp_suboid_append(oid, (asn_subid_t) SNMP_BRIDGEID_OCTETS) < 0)
+        return (NULL);
 
-	ptr = str;
-	/* Read the priority. */
-	saved_errno = errno;
-	v = strtoul(ptr, &endptr, 10);
-	errno = 0;
+    ptr = str;
+    /* Read the priority. */
+    saved_errno = errno;
+    v = strtoul(ptr, &endptr, 10);
+    errno = 0;
 
-	if (v > SNMP_MAX_BRIDGE_PRIORITY || errno != 0 || *endptr != '.') {
-		errno = saved_errno;
-		warnx("Bad bridge priority value %d", v);
-		return (NULL);
-	}
+    if (v > SNMP_MAX_BRIDGE_PRIORITY || errno != 0 || *endptr != '.') {
+        errno = saved_errno;
+        warnx("Bad bridge priority value %d", v);
+        return (NULL);
+    }
 
-	if (snmp_suboid_append(oid, (asn_subid_t) (v & 0xff00)) < 0)
-		return (NULL);
+    if (snmp_suboid_append(oid, (asn_subid_t) (v & 0xff00)) < 0)
+        return (NULL);
 
-	if (snmp_suboid_append(oid, (asn_subid_t) (v & 0xff)) < 0)
-		return (NULL);
+    if (snmp_suboid_append(oid, (asn_subid_t) (v & 0xff)) < 0)
+        return (NULL);
 
-	ptr = endptr + 1;
-	for (i = 0; i < 5; i++) {
-		saved_errno = errno;
-		v = strtoul(ptr, &endptr, 16);
-		errno = saved_errno;
-		if (v > 0xff) {
-			warnx("Integer value %s not supported", str);
-			return (NULL);
-		}
-		if (*endptr != ':') {
-			warnx("Failed adding oid - %s",str);
-			return (NULL);
-		}
-		if (snmp_suboid_append(oid, (asn_subid_t) v) < 0)
-			return (NULL);
-		ptr = endptr + 1;
-	}
+    ptr = endptr + 1;
+    for (i = 0; i < 5; i++) {
+        saved_errno = errno;
+        v = strtoul(ptr, &endptr, 16);
+        errno = saved_errno;
+        if (v > 0xff) {
+            warnx("Integer value %s not supported", str);
+            return (NULL);
+        }
+        if (*endptr != ':') {
+            warnx("Failed adding oid - %s",str);
+            return (NULL);
+        }
+        if (snmp_suboid_append(oid, (asn_subid_t) v) < 0)
+            return (NULL);
+        ptr = endptr + 1;
+    }
 
-	/* The last one - don't check the ending char here. */
-	saved_errno = errno;
-	v = strtoul(ptr, &endptr, 16);
-	errno = saved_errno;
-	if (v > 0xff) {
-		warnx("Integer value %s not supported", str);
-		return (NULL);
-	}
-	if (snmp_suboid_append(oid, (asn_subid_t) v) < 0)
-		return (NULL);
+    /* The last one - don't check the ending char here. */
+    saved_errno = errno;
+    v = strtoul(ptr, &endptr, 16);
+    errno = saved_errno;
+    if (v > 0xff) {
+        warnx("Integer value %s not supported", str);
+        return (NULL);
+    }
+    if (snmp_suboid_append(oid, (asn_subid_t) v) < 0)
+        return (NULL);
 
-	return (endptr);
+    return (endptr);
 }
 
 static int32_t
-parse_bridge_id(snmp_value_t *sv, char *string)
-{
-	char *ptr, *endptr;
-	int32_t i, saved_errno;
-	uint32_t v;
-	uint8_t	bridge_id[SNMP_BRIDGEID_OCTETS];
+parse_bridge_id(snmp_value_t *sv, char *string) {
+    char *ptr, *endptr;
+    int32_t i, saved_errno;
+    uint32_t v;
+    uint8_t	bridge_id[SNMP_BRIDGEID_OCTETS];
 
-	ptr = string;
-	/* Read the priority. */
-	saved_errno = errno;
-	errno = 0;
-	v = strtoul(string, &endptr, 10);
-	errno = saved_errno;
+    ptr = string;
+    /* Read the priority. */
+    saved_errno = errno;
+    errno = 0;
+    v = strtoul(string, &endptr, 10);
+    errno = saved_errno;
 
-	if (v > SNMP_MAX_BRIDGE_PRIORITY || errno != 0 || *endptr != '.') {
-		errno = saved_errno;
-		warnx("Bad bridge priority value %d", v);
-		return (-1);
-	}
+    if (v > SNMP_MAX_BRIDGE_PRIORITY || errno != 0 || *endptr != '.') {
+        errno = saved_errno;
+        warnx("Bad bridge priority value %d", v);
+        return (-1);
+    }
 
-	bridge_id[0] = (v & 0xff00);
-	bridge_id[1] = (v & 0xff);
+    bridge_id[0] = (v & 0xff00);
+    bridge_id[1] = (v & 0xff);
 
-	string = endptr + 1;
+    string = endptr + 1;
 
-	for (i = 0; i < 5; i++) {
-		v = strtoul(string, &endptr, 16);
-		if (v > 0xff) {
-			warnx("Integer value %s not supported", string);
-			return (-1);
-		}
-		if(*endptr != ':') {
-			warnx("Failed reading octet - %s", string);
-			return (-1);
-		}
-		bridge_id[i + 2] = v;
-		string = endptr + 1;
-	}
+    for (i = 0; i < 5; i++) {
+        v = strtoul(string, &endptr, 16);
+        if (v > 0xff) {
+            warnx("Integer value %s not supported", string);
+            return (-1);
+        }
+        if(*endptr != ':') {
+            warnx("Failed reading octet - %s", string);
+            return (-1);
+        }
+        bridge_id[i + 2] = v;
+        string = endptr + 1;
+    }
 
-	/* The last one - don't check the ending char here. */
-	v = strtoul(string, &endptr, 16);
-	if (v > 0xff) {
-		warnx("Integer value %s not supported", string);
-		return (-1);
-	}
-	bridge_id[7] = v;
+    /* The last one - don't check the ending char here. */
+    v = strtoul(string, &endptr, 16);
+    if (v > 0xff) {
+        warnx("Integer value %s not supported", string);
+        return (-1);
+    }
+    bridge_id[7] = v;
 
-	if ((sv->v.octetstring.octets = malloc(SNMP_BRIDGEID_OCTETS)) == NULL) {
-		return (-1);
-	}
+    if ((sv->v.octetstring.octets = malloc(SNMP_BRIDGEID_OCTETS)) == NULL) {
+        return (-1);
+    }
 
-	sv->v.octetstring.len = SNMP_BRIDGEID_OCTETS;
-	memcpy(sv->v.octetstring.octets, bridge_id, SNMP_BRIDGEID_OCTETS);
-	sv->syntax = SNMP_SYNTAX_OCTETSTRING;
-	return (1);
+    sv->v.octetstring.len = SNMP_BRIDGEID_OCTETS;
+    memcpy(sv->v.octetstring.octets, bridge_id, SNMP_BRIDGEID_OCTETS);
+    sv->syntax = SNMP_SYNTAX_OCTETSTRING;
+    return (1);
 }
 
 /**************************************************************
@@ -984,102 +994,99 @@ parse_bridge_id(snmp_value_t *sv, char *string)
  *    SYNTAX	OCTET STRING (SIZE(2))
  */
 static uint8_t *
-snmp_oct2bport_id(uint32_t len, uint8_t *octets, uint8_t *buf)
-{
-	uint8_t *ptr;
+snmp_oct2bport_id(uint32_t len, uint8_t *octets, uint8_t *buf) {
+    uint8_t *ptr;
 
-	if (len != SNMP_BPORT_OCTETS || octets == NULL || buf == NULL)
-		return (NULL);
+    if (len != SNMP_BPORT_OCTETS || octets == NULL || buf == NULL)
+        return (NULL);
 
-	buf[0]= '\0';
-	ptr = buf;
+    buf[0]= '\0';
+    ptr = buf;
 
-	ptr += sprintf(ptr, "%d.", octets[0]);
-	ptr += sprintf(ptr, "%d", octets[1]);
+    ptr += sprintf(ptr, "%d.", octets[0]);
+    ptr += sprintf(ptr, "%d", octets[1]);
 
-	return (buf);
+    return (buf);
 }
 
 static char *
-snmp_bport_id2oct(char *str, asn_oid_t *oid)
-{
-	char *endptr, *ptr;
-	uint32_t v;
-	int saved_errno;
+snmp_bport_id2oct(char *str, asn_oid_t *oid) {
+    char *endptr, *ptr;
+    uint32_t v;
+    int saved_errno;
 
-	if (snmp_suboid_append(oid, (asn_subid_t) SNMP_BPORT_OCTETS) < 0)
-		return (NULL);
+    if (snmp_suboid_append(oid, (asn_subid_t) SNMP_BPORT_OCTETS) < 0)
+        return (NULL);
 
-	ptr = str;
-	/* Read the priority. */
-	saved_errno = errno;
-	v = strtoul(ptr, &endptr, 10);
-	errno = 0;
+    ptr = str;
+    /* Read the priority. */
+    saved_errno = errno;
+    v = strtoul(ptr, &endptr, 10);
+    errno = 0;
 
-	if (v > SNMP_MAX_BPORT_PRIORITY || errno != 0 || *endptr != '.') {
-		errno = saved_errno;
-		warnx("Bad bridge port priority value %d", v);
-		return (NULL);
-	}
+    if (v > SNMP_MAX_BPORT_PRIORITY || errno != 0 || *endptr != '.') {
+        errno = saved_errno;
+        warnx("Bad bridge port priority value %d", v);
+        return (NULL);
+    }
 
-	if (snmp_suboid_append(oid, (asn_subid_t) v) < 0)
-		return (NULL);
+    if (snmp_suboid_append(oid, (asn_subid_t) v) < 0)
+        return (NULL);
 
-	saved_errno = errno;
-	v = strtoul(ptr, &endptr, 16);
-	errno = saved_errno;
+    saved_errno = errno;
+    v = strtoul(ptr, &endptr, 16);
+    errno = saved_errno;
 
-	if (v > 0xff) {
-		warnx("Bad port number - %d", v);
-		return (NULL);
-	}
+    if (v > 0xff) {
+        warnx("Bad port number - %d", v);
+        return (NULL);
+    }
 
-	if (snmp_suboid_append(oid, (asn_subid_t) v) < 0)
-		return (NULL);
+    if (snmp_suboid_append(oid, (asn_subid_t) v) < 0)
+        return (NULL);
 
-	return (endptr);
+    return (endptr);
 }
 
 static int32_t
-parse_bport_id(snmp_value_t *value, char *string)
-{
-	char *ptr, *endptr;
-	int saved_errno;
-	uint32_t v;
-	uint8_t	bport_id[SNMP_BPORT_OCTETS];
+parse_bport_id(snmp_value_t *value, char *string) {
+    char *ptr, *endptr;
+    int saved_errno;
+    uint32_t v;
+    uint8_t	bport_id[SNMP_BPORT_OCTETS];
 
-	ptr = string;
-	/* Read the priority. */
-	saved_errno = errno;
-	errno = 0;
-	v = strtoul(string, &endptr, 10);
-	errno = saved_errno;
+    ptr = string;
+    /* Read the priority. */
+    saved_errno = errno;
+    errno = 0;
+    v = strtoul(string, &endptr, 10);
+    errno = saved_errno;
 
-	if (v > SNMP_MAX_BPORT_PRIORITY || errno != 0 || *endptr != '.') {
-		errno = saved_errno;
-		warnx("Bad bridge port priority value %d", v);
-		return (-1);
-	}
+    if (v > SNMP_MAX_BPORT_PRIORITY || errno != 0 || *endptr != '.') {
+        errno = saved_errno;
+        warnx("Bad bridge port priority value %d", v);
+        return (-1);
+    }
 
-	bport_id[0] = v;
+    bport_id[0] = v;
 
-	string = endptr + 1;
-	v = strtoul(string, &endptr, 16);
-	if (v > 0xff) {
-		warnx("Bad port number - %d", v);
-		return (-1);
-	}
+    string = endptr + 1;
+    v = strtoul(string, &endptr, 16);
+    if (v > 0xff) {
+        warnx("Bad port number - %d", v);
+        return (-1);
+    }
 
-	bport_id[1] = v;
+    bport_id[1] = v;
 
-	if ((value->v.octetstring.octets = malloc(SNMP_BPORT_OCTETS)) == NULL) {
-		return (-1);
-	}
+    if ((value->v.octetstring.octets = malloc(SNMP_BPORT_OCTETS)) == NULL) {
+        return (-1);
+    }
 
-	value->v.octetstring.len = SNMP_BPORT_OCTETS;
-	memcpy(value->v.octetstring.octets, bport_id, SNMP_BPORT_OCTETS);
-	value->syntax = SNMP_SYNTAX_OCTETSTRING;
-	return (1);
+    value->v.octetstring.len = SNMP_BPORT_OCTETS;
+    memcpy(value->v.octetstring.octets, bport_id, SNMP_BPORT_OCTETS);
+    value->syntax = SNMP_SYNTAX_OCTETSTRING;
+    return (1);
 }
 /**************************************************************
  * InetAddress
@@ -1117,156 +1124,150 @@ parse_bport_id(snmp_value_t *value, char *string)
  **************************************************************
  * TODO: FIXME!!! syrinx: Since we do not support checking the
  * consistency of a varbinding based on the value of a previous
- * one, try to guess the type of address based on the 
+ * one, try to guess the type of address based on the
  * OctetString SIZE - 4 for IPv4, 16 for IPv6, others currently
  * not supported.
  */
 static uint8_t *
-snmp_oct2inetaddr(uint32_t len, uint8_t *octets, uint8_t *buf)
-{
-	int af;
-	void *ip;
-	struct in_addr	ipv4;
-	struct in6_addr	ipv6;
+snmp_oct2inetaddr(uint32_t len, uint8_t *octets, uint8_t *buf) {
+    int af;
+    void *ip;
+    struct in_addr	ipv4;
+    struct in6_addr	ipv6;
 
-	if (len > MAX_OCTSTRING_LEN || octets == NULL || buf == NULL)
-		return (NULL);
+    if (len > MAX_OCTSTRING_LEN || octets == NULL || buf == NULL)
+        return (NULL);
 
-	switch (len) {
-		/* XXX: FIXME - IPv4*/
-		case 4:
-			memcpy(&ipv4.s_addr, octets, sizeof(ipv4.s_addr));
-			af = AF_INET;
-			ip = &ipv4;
-			break;
+    switch (len) {
+        /* XXX: FIXME - IPv4*/
+    case 4:
+        memcpy(&ipv4.s_addr, octets, sizeof(ipv4.s_addr));
+        af = AF_INET;
+        ip = &ipv4;
+        break;
 
-		/* XXX: FIXME - IPv4*/
-		case 16:
-			memcpy(ipv6.s6_addr, octets, sizeof(ipv6.s6_addr));
-			af = AF_INET6;
-			ip = &ipv6;
-			break;
+        /* XXX: FIXME - IPv4*/
+    case 16:
+        memcpy(ipv6.s6_addr, octets, sizeof(ipv6.s6_addr));
+        af = AF_INET6;
+        ip = &ipv6;
+        break;
 
-		default:
-			return (NULL);
-	}
+    default:
+        return (NULL);
+    }
 
-	if (inet_ntop(af, ip, buf, SNMP_INADDRS_STRSZ) == NULL) {
-		warnx("inet_ntop failed - %s", strerror(errno));
-		return (NULL);
-	}
+    if (inet_ntop(af, ip, buf, SNMP_INADDRS_STRSZ) == NULL) {
+        warnx("inet_ntop failed - %s", strerror(errno));
+        return (NULL);
+    }
 
-	return (buf);
+    return (buf);
 }
 
 static char *
-snmp_inetaddr2oct(char *str, asn_oid_t *oid)
-{
-	return (NULL);
+snmp_inetaddr2oct(char *str, asn_oid_t *oid) {
+    return (NULL);
 }
 
 static int32_t
-parse_inetaddr(snmp_value_t *value, char *string)
-{
-	return (-1);
+parse_inetaddr(snmp_value_t *value, char *string) {
+    return (-1);
 }
 
 /**************************************************************
  * SNMP BITS type - XXX: FIXME
  **************************************************************/
 static uint8_t *
-snmp_oct2bits(uint32_t len, uint8_t *octets, uint8_t *buf)
-{
-	int i, bits;
-	uint64_t value;
+snmp_oct2bits(uint32_t len, uint8_t *octets, uint8_t *buf) {
+    int i, bits;
+    uint64_t value;
 
-	if (len > sizeof(value) || octets == NULL || buf == NULL)
-		return (NULL);
+    if (len > sizeof(value) || octets == NULL || buf == NULL)
+        return (NULL);
 
-	for (i = len, value = 0, bits = 0; i > 0; i--, bits += 8)
-		value += octets[i] << bits;
+    for (i = len, value = 0, bits = 0; i > 0; i--, bits += 8)
+        value += octets[i] << bits;
 
-	buf[0]= '\0';
-	sprintf(buf, "0x%llx.", value);
+    buf[0]= '\0';
+    sprintf(buf, "0x%llx.", value);
 
-	return (buf);
+    return (buf);
 }
 
 static char *
-snmp_bits2oct(char *str, asn_oid_t *oid)
-{
-	char *endptr;
-	int i, size, bits, saved_errno;
-	uint64_t v, mask = 0xFF00000000000000;
+snmp_bits2oct(char *str, asn_oid_t *oid) {
+    char *endptr;
+    int i, size, bits, saved_errno;
+    uint64_t v, mask = 0xFF00000000000000;
 
-	saved_errno = errno;
-	errno = 0;
+    saved_errno = errno;
+    errno = 0;
 
-	v = strtoull(str, &endptr, 16);
-	if (errno != 0) {
-		warnx("Bad BITS value %s - %s", str, strerror(errno));
-		errno = saved_errno;
-		return (NULL);
-	}
+    v = strtoull(str, &endptr, 16);
+    if (errno != 0) {
+        warnx("Bad BITS value %s - %s", str, strerror(errno));
+        errno = saved_errno;
+        return (NULL);
+    }
 
-	bits = 8;
-	/* Determine length - up to 8 octets supported so far. */
-	for (size = sizeof(v); size > 0; size--) {
-		if ((v & mask) != 0)
-			break;
-		mask >> bits;
-	}
+    bits = 8;
+    /* Determine length - up to 8 octets supported so far. */
+    for (size = sizeof(v); size > 0; size--) {
+        if ((v & mask) != 0)
+            break;
+        mask >>= bits;
+    }
 
-	if (size == 0)
-		size = 1;
+    if (size == 0)
+        size = 1;
 
-	if (snmp_suboid_append(oid, (asn_subid_t) size) < 0)
-		return (NULL);
+    if (snmp_suboid_append(oid, (asn_subid_t) size) < 0)
+        return (NULL);
 
-	for (i = 0, bits = 0; i < size; i++, bits += 8)
-		if (snmp_suboid_append(oid,
-		    (asn_subid_t)((v & mask) >> bits)) < 0)
-			return (NULL);
+    for (i = 0, bits = 0; i < size; i++, bits += 8)
+        if (snmp_suboid_append(oid,
+                               (asn_subid_t)((v & mask) >> bits)) < 0)
+            return (NULL);
 
-	return (endptr);
+    return (endptr);
 }
 
 static int32_t
-parse_bits(snmp_value_t *value, char *string)
-{
-	char *endptr;
-	int i, size, bits, saved_errno;
-	uint64_t v, mask = 0xFF00000000000000;
+parse_bits(snmp_value_t *value, char *string) {
+    char *endptr;
+    int i, size, bits, saved_errno;
+    uint64_t v, mask = 0xFF00000000000000;
 
-	saved_errno = errno;
-	errno = 0;
+    saved_errno = errno;
+    errno = 0;
 
-	v = strtoull(string, &endptr, 16);
+    v = strtoull(string, &endptr, 16);
 
-	if (errno != 0) {
-		warnx("Bad BITS value %s - %s", string, strerror(errno));
-		errno = saved_errno;
-		return (-1);
-	}
+    if (errno != 0) {
+        warnx("Bad BITS value %s - %s", string, strerror(errno));
+        errno = saved_errno;
+        return (-1);
+    }
 
-	bits = 8;
-	/* Determine length - up to 8 octets supported so far. */
-	for (size = sizeof(v); size > 0; size--) {
-		if ((v & mask) != 0)
-			break;
-		mask >> bits;
-	}
+    bits = 8;
+    /* Determine length - up to 8 octets supported so far. */
+    for (size = sizeof(v); size > 0; size--) {
+        if ((v & mask) != 0)
+            break;
+        mask >>= bits;
+    }
 
-	if (size == 0)
-		size = 1;
+    if (size == 0)
+        size = 1;
 
-	if ((value->v.octetstring.octets = malloc(size)) == NULL) {
-		return (-1);
-	}
+    if ((value->v.octetstring.octets = malloc(size)) == NULL) {
+        return (-1);
+    }
 
-	value->v.octetstring.len = size;
-	for (i = 0, bits = 0; i < size; i++, bits += 8)
-		value->v.octetstring.octets[i] = (v & mask) >> bits;
-	value->syntax = SNMP_SYNTAX_OCTETSTRING;
-	return (1);
+    value->v.octetstring.len = size;
+    for (i = 0, bits = 0; i < size; i++, bits += 8)
+        value->v.octetstring.octets[i] = (v & mask) >> bits;
+    value->syntax = SNMP_SYNTAX_OCTETSTRING;
+    return (1);
 }

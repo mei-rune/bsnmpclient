@@ -14,7 +14,7 @@
 #define HAVE_STDINT_H     1
 #define OPENSSL_SYS_WIN32 1
 
-	
+
 #ifndef __GNUC__
 #define ssize_t    int
 #endif
@@ -53,6 +53,7 @@
 #ifdef __GNUC__
 #define HAVE_GETTIMEOFDAY    1
 #endif
-//#define HAVE_LIBCRYPTO 1
+
+#define HAVE_LIBCRYPTO 1
 
 #endif

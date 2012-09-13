@@ -4,7 +4,7 @@
  *	All rights reserved.
  *
  * Author: Harti Brandt <harti@freebsd.org>
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -13,7 +13,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY AUTHOR AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -35,7 +35,7 @@ enum asn_err snmp_binding_encode(asn_buf_t *, const snmp_value_t *);
 enum snmp_code snmp_pdu_encode_header(asn_buf_t *, snmp_pdu_t *);
 enum snmp_code snmp_fix_encoding(asn_buf_t *, snmp_pdu_t *);
 enum asn_err snmp_parse_pdus_hdr(asn_buf_t *b, snmp_pdu_t *pdu,
-    asn_len_t *lenp);
+                                 asn_len_t *lenp);
 
 enum snmp_code snmp_pdu_calc_digest(const snmp_pdu_t *, uint8_t *);
 enum snmp_code snmp_pdu_encrypt(const snmp_pdu_t *);

@@ -86,10 +86,10 @@
 #ifdef QUEUE_MACRO_DEBUG
 /* Store the last 2 places the queue element or head was altered */
 struct qm_trace {
-        char * lastfile;
-        int lastline;
-        char * prevfile;
-        int prevline;
+    char * lastfile;
+    int lastline;
+    char * prevfile;
+    int prevline;
 };
 
 #define TRACEBUF        struct qm_trace trace;

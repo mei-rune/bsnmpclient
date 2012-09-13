@@ -75,165 +75,160 @@ static const uint8_t opad = 0x5c;
 #ifdef HAVE_LIBCRYPTO
 
 static int32_t snmp_digest_init(enum snmp_authentication auth_proto, EVP_MD_CTX *ctx,
-    const EVP_MD **dtype, uint32_t *keylen)
-{
-	if (auth_proto == SNMP_AUTH_HMAC_MD5) {
-		*dtype = EVP_md5();
-		*keylen = SNMP_AUTH_HMACMD5_KEY_SIZ;
-	} else if (auth_proto == SNMP_AUTH_HMAC_SHA) {
-		*dtype = EVP_sha1();
-		*keylen = SNMP_AUTH_HMACSHA_KEY_SIZ;
-	} else if (auth_proto == SNMP_AUTH_NOAUTH)
-		return (0);
-	else {
-		snmp_error("unknown authentication option - %d", auth_proto);
-		return (-1);
-	}
+                                const EVP_MD **dtype, uint32_t *keylen) {
+    if (auth_proto == SNMP_AUTH_HMAC_MD5) {
+        *dtype = EVP_md5();
+        *keylen = SNMP_AUTH_HMACMD5_KEY_SIZ;
+    } else if (auth_proto == SNMP_AUTH_HMAC_SHA) {
+        *dtype = EVP_sha1();
+        *keylen = SNMP_AUTH_HMACSHA_KEY_SIZ;
+    } else if (auth_proto == SNMP_AUTH_NOAUTH)
+        return (0);
+    else {
+        snmp_error("unknown authentication option - %d", auth_proto);
+        return (-1);
+    }
 
-	if (EVP_DigestInit(ctx, *dtype) != 1) {
-		snmp_error("init digest failed - %d", auth_proto);
-		return (-1);
-	}
+    if (EVP_DigestInit(ctx, *dtype) != 1) {
+        snmp_error("init digest failed - %d", auth_proto);
+        return (-1);
+    }
 
-	return (1);
+    return (1);
 }
 
-enum snmp_code snmp_pdu_calc_digest(const snmp_pdu_t *pdu, uint8_t *digest)
-{
-	uint8_t md[EVP_MAX_MD_SIZE], extkey[SNMP_EXTENDED_KEY_SIZ];
-	uint8_t key1[SNMP_EXTENDED_KEY_SIZ], key2[SNMP_EXTENDED_KEY_SIZ];
-	uint32_t i, keylen, olen;
-	int32_t err;
-	const EVP_MD *dtype;
-	EVP_MD_CTX ctx;
+enum snmp_code snmp_pdu_calc_digest(const snmp_pdu_t *pdu, uint8_t *digest) {
+    uint8_t md[EVP_MAX_MD_SIZE], extkey[SNMP_EXTENDED_KEY_SIZ];
+    uint8_t key1[SNMP_EXTENDED_KEY_SIZ], key2[SNMP_EXTENDED_KEY_SIZ];
+    uint32_t i, keylen, olen;
+    int32_t err;
+    const EVP_MD *dtype;
+    EVP_MD_CTX ctx;
 
-	err = snmp_digest_init(pdu->user.auth_proto, &ctx, &dtype, &keylen);
-	if (err < 0)
-		return (SNMP_CODE_BADDIGEST);
-	else if (err == 0)
-		return (SNMP_CODE_OK);
+    err = snmp_digest_init(pdu->user.auth_proto, &ctx, &dtype, &keylen);
+    if (err < 0)
+        return (SNMP_CODE_BADDIGEST);
+    else if (err == 0)
+        return (SNMP_CODE_OK);
 
     if(0 != pdu->digest_ptr)
-	    memset(pdu->digest_ptr, 0, sizeof(pdu->msg_digest));
-	memcpy(extkey, pdu->user.auth_key, keylen);
-	memset(extkey + keylen, 0, sizeof(extkey) - keylen);
+        memset(pdu->digest_ptr, 0, sizeof(pdu->msg_digest));
+    memcpy(extkey, pdu->user.auth_key, keylen);
+    memset(extkey + keylen, 0, sizeof(extkey) - keylen);
 
-	for (i = 0; i < SNMP_EXTENDED_KEY_SIZ; i++) {
-		key1[i] = extkey[i] ^ ipad;
-		key2[i] = extkey[i] ^ opad;
-	}
+    for (i = 0; i < SNMP_EXTENDED_KEY_SIZ; i++) {
+        key1[i] = extkey[i] ^ ipad;
+        key2[i] = extkey[i] ^ opad;
+    }
 
-	if (EVP_DigestUpdate(&ctx, key1, SNMP_EXTENDED_KEY_SIZ) != 1 ||
-	    EVP_DigestUpdate(&ctx, pdu->outer_ptr, pdu->outer_len) != 1 ||
-	    EVP_DigestFinal(&ctx, md, &olen) != 1)
-		goto failed;
+    if (EVP_DigestUpdate(&ctx, key1, SNMP_EXTENDED_KEY_SIZ) != 1 ||
+            EVP_DigestUpdate(&ctx, pdu->outer_ptr, pdu->outer_len) != 1 ||
+            EVP_DigestFinal(&ctx, md, &olen) != 1)
+        goto failed;
 
-	if (EVP_DigestInit(&ctx, dtype) != 1 ||
-	    EVP_DigestUpdate(&ctx, key2, SNMP_EXTENDED_KEY_SIZ) != 1 ||
-	    EVP_DigestUpdate(&ctx, md, olen) != 1 ||
-	    EVP_DigestFinal(&ctx, md, &olen) != 1)
-		goto failed;
+    if (EVP_DigestInit(&ctx, dtype) != 1 ||
+            EVP_DigestUpdate(&ctx, key2, SNMP_EXTENDED_KEY_SIZ) != 1 ||
+            EVP_DigestUpdate(&ctx, md, olen) != 1 ||
+            EVP_DigestFinal(&ctx, md, &olen) != 1)
+        goto failed;
 
-	if (olen < SNMP_USM_AUTH_SIZE) {
-		snmp_error("bad digest size - %d", olen);
-		EVP_MD_CTX_cleanup(&ctx);
-		return (SNMP_CODE_BADDIGEST);
-	}
+    if (olen < SNMP_USM_AUTH_SIZE) {
+        snmp_error("bad digest size - %d", olen);
+        EVP_MD_CTX_cleanup(&ctx);
+        return (SNMP_CODE_BADDIGEST);
+    }
 
-	memcpy(digest, md, SNMP_USM_AUTH_SIZE);
-	EVP_MD_CTX_cleanup(&ctx);
-	return (SNMP_CODE_OK);
+    memcpy(digest, md, SNMP_USM_AUTH_SIZE);
+    EVP_MD_CTX_cleanup(&ctx);
+    return (SNMP_CODE_OK);
 
 failed:
-	EVP_MD_CTX_cleanup(&ctx);
-	return (SNMP_CODE_BADDIGEST);
+    EVP_MD_CTX_cleanup(&ctx);
+    return (SNMP_CODE_BADDIGEST);
 }
 
 static int32_t snmp_pdu_cipher_init(const snmp_pdu_t *pdu, int32_t len,
-    const EVP_CIPHER **ctype, uint8_t *piv)
-{
-	int i;
-	uint32_t netint;
+                                    const EVP_CIPHER **ctype, uint8_t *piv) {
+    int i;
+    uint32_t netint;
 
-	if (pdu->user.priv_proto == SNMP_PRIV_DES) {
-		if (len  % 8 != 0)
-			return (-1);
-		*ctype = EVP_des_cbc();
-		memcpy(piv, pdu->msg_salt, sizeof(pdu->msg_salt));
-		for (i = 0; i < 8; i++)
-			piv[i] = piv[i] ^ pdu->user.priv_key[8 + i];
-	} else if (pdu->user.priv_proto == SNMP_PRIV_AES) {
-		*ctype = EVP_aes_128_cfb128();
-		netint = htonl(pdu->engine.engine_boots);
-		memcpy(piv, &netint, sizeof(netint));
-		piv += sizeof(netint);
-		netint = htonl(pdu->engine.engine_time);
-		memcpy(piv, &netint, sizeof(netint));
-		piv += sizeof(netint);
-		memcpy(piv, pdu->msg_salt, sizeof(pdu->msg_salt));
-	} else if (pdu->user.priv_proto == SNMP_PRIV_NOPRIV)
-		return (0);
-	else {
-		snmp_error("unknown privacy option - %d", pdu->user.priv_proto);
-		return (-1);
-	}
+    if (pdu->user.priv_proto == SNMP_PRIV_DES) {
+        if (len  % 8 != 0)
+            return (-1);
+        *ctype = EVP_des_cbc();
+        memcpy(piv, pdu->msg_salt, sizeof(pdu->msg_salt));
+        for (i = 0; i < 8; i++)
+            piv[i] = piv[i] ^ pdu->user.priv_key[8 + i];
+    } else if (pdu->user.priv_proto == SNMP_PRIV_AES) {
+        *ctype = EVP_aes_128_cfb128();
+        netint = htonl(pdu->engine.engine_boots);
+        memcpy(piv, &netint, sizeof(netint));
+        piv += sizeof(netint);
+        netint = htonl(pdu->engine.engine_time);
+        memcpy(piv, &netint, sizeof(netint));
+        piv += sizeof(netint);
+        memcpy(piv, pdu->msg_salt, sizeof(pdu->msg_salt));
+    } else if (pdu->user.priv_proto == SNMP_PRIV_NOPRIV)
+        return (0);
+    else {
+        snmp_error("unknown privacy option - %d", pdu->user.priv_proto);
+        return (-1);
+    }
 
-	return (1);
+    return (1);
 }
 
-enum snmp_code snmp_pdu_encrypt(const snmp_pdu_t *pdu)
-{
-	int32_t err, olen;
-	uint8_t iv[SNMP_PRIV_AES_IV_SIZ];
-	const EVP_CIPHER *ctype;
-	EVP_CIPHER_CTX ctx;
+enum snmp_code snmp_pdu_encrypt(const snmp_pdu_t *pdu) {
+    int32_t err, olen;
+    uint8_t iv[SNMP_PRIV_AES_IV_SIZ];
+    const EVP_CIPHER *ctype;
+    EVP_CIPHER_CTX ctx;
 
-	err = snmp_pdu_cipher_init(pdu, pdu->scoped_len, &ctype, iv);
-	if (err < 0)
-		return (SNMP_CODE_EDECRYPT);
-	else if (err == 0)
-		return (SNMP_CODE_OK);
+    err = snmp_pdu_cipher_init(pdu, pdu->scoped_len, &ctype, iv);
+    if (err < 0)
+        return (SNMP_CODE_EDECRYPT);
+    else if (err == 0)
+        return (SNMP_CODE_OK);
 
-	if (EVP_EncryptInit(&ctx, ctype, pdu->user.priv_key, iv) != 1)
-		return (SNMP_CODE_FAILED);
+    if (EVP_EncryptInit(&ctx, ctype, pdu->user.priv_key, iv) != 1)
+        return (SNMP_CODE_FAILED);
 
-	if (EVP_EncryptUpdate(&ctx, pdu->scoped_ptr, &olen, pdu->scoped_ptr,
-	    pdu->scoped_len) != 1 ||
-	    EVP_EncryptFinal(&ctx, pdu->scoped_ptr + olen, &olen) != 1) {
-		EVP_CIPHER_CTX_cleanup(&ctx);
-		return (SNMP_CODE_FAILED);
-	}
+    if (EVP_EncryptUpdate(&ctx, pdu->scoped_ptr, &olen, pdu->scoped_ptr,
+                          pdu->scoped_len) != 1 ||
+            EVP_EncryptFinal(&ctx, pdu->scoped_ptr + olen, &olen) != 1) {
+        EVP_CIPHER_CTX_cleanup(&ctx);
+        return (SNMP_CODE_FAILED);
+    }
 
-	EVP_CIPHER_CTX_cleanup(&ctx);
-	return (SNMP_CODE_OK);
+    EVP_CIPHER_CTX_cleanup(&ctx);
+    return (SNMP_CODE_OK);
 }
 
-enum snmp_code snmp_pdu_decrypt(const snmp_pdu_t *pdu)
-{
-	int32_t err, olen;
-	uint8_t iv[SNMP_PRIV_AES_IV_SIZ];
-	const EVP_CIPHER *ctype;
-	EVP_CIPHER_CTX ctx;
+enum snmp_code snmp_pdu_decrypt(const snmp_pdu_t *pdu) {
+    int32_t err, olen;
+    uint8_t iv[SNMP_PRIV_AES_IV_SIZ];
+    const EVP_CIPHER *ctype;
+    EVP_CIPHER_CTX ctx;
 
-	err = snmp_pdu_cipher_init(pdu, pdu->scoped_len, &ctype, iv);
-	if (err < 0)
-		return (SNMP_CODE_EDECRYPT);
-	else if (err == 0)
-		return (SNMP_CODE_OK);
+    err = snmp_pdu_cipher_init(pdu, pdu->scoped_len, &ctype, iv);
+    if (err < 0)
+        return (SNMP_CODE_EDECRYPT);
+    else if (err == 0)
+        return (SNMP_CODE_OK);
 
-	if (EVP_DecryptInit(&ctx, ctype, pdu->user.priv_key, iv) != 1 ||
-	    EVP_CIPHER_CTX_set_padding(&ctx, 0) != 1)
-		return (SNMP_CODE_EDECRYPT);
+    if (EVP_DecryptInit(&ctx, ctype, pdu->user.priv_key, iv) != 1 ||
+            EVP_CIPHER_CTX_set_padding(&ctx, 0) != 1)
+        return (SNMP_CODE_EDECRYPT);
 
-	if (EVP_DecryptUpdate(&ctx, pdu->scoped_ptr, &olen, pdu->scoped_ptr,
-	    pdu->scoped_len) != 1 ||
-	    EVP_DecryptFinal(&ctx, pdu->scoped_ptr + olen, &olen) != 1) {
-		EVP_CIPHER_CTX_cleanup(&ctx);
-		return (SNMP_CODE_EDECRYPT);
-	}
+    if (EVP_DecryptUpdate(&ctx, pdu->scoped_ptr, &olen, pdu->scoped_ptr,
+                          pdu->scoped_len) != 1 ||
+            EVP_DecryptFinal(&ctx, pdu->scoped_ptr + olen, &olen) != 1) {
+        EVP_CIPHER_CTX_cleanup(&ctx);
+        return (SNMP_CODE_EDECRYPT);
+    }
 
-	EVP_CIPHER_CTX_cleanup(&ctx);
-	return (SNMP_CODE_OK);
+    EVP_CIPHER_CTX_cleanup(&ctx);
+    return (SNMP_CODE_OK);
 }
 //
 ///* [RFC 3414] - A.2. Password to Key Algorithm */
@@ -316,231 +311,222 @@ enum snmp_code snmp_pdu_decrypt(const snmp_pdu_t *pdu)
 
 /* [RFC 3414] - A.2. Password to Key Algorithm */
 static enum snmp_code snmp_passphrase_to_keys(enum snmp_authentication auth_proto
-	, const char *passphrase, size_t passphrase_len, unsigned char* out, uint32_t* out_len)
-{
-	int err, loop, i;
-	uint32_t  keylen;
-	const EVP_MD *dtype;
-	EVP_MD_CTX ctx;
-	uint8_t authbuf[SNMP_AUTH_BUF_SIZE];
+        , const char *passphrase, size_t passphrase_len, unsigned char* out, uint32_t* out_len) {
+    int err, loop, i;
+    uint32_t  keylen;
+    const EVP_MD *dtype;
+    EVP_MD_CTX ctx;
+    uint8_t authbuf[SNMP_AUTH_BUF_SIZE];
 
-	if (passphrase == NULL || out == NULL || out_len == NULL)
-		return (SNMP_CODE_FAILED);
+    if (passphrase == NULL || out == NULL || out_len == NULL)
+        return (SNMP_CODE_FAILED);
 
-	err = snmp_digest_init(auth_proto, &ctx, &dtype, &keylen);
-	if (err < 0)
-		return (SNMP_CODE_BADDIGEST);
-	else if (err == 0)
-		return (SNMP_CODE_OK);
+    err = snmp_digest_init(auth_proto, &ctx, &dtype, &keylen);
+    if (err < 0)
+        return (SNMP_CODE_BADDIGEST);
+    else if (err == 0)
+        return (SNMP_CODE_OK);
 
-	memset(out, 0, *out_len);
+    memset(out, 0, *out_len);
 
-	for (loop = 0; loop < SNMP_AUTH_KEY_LOOPCNT; loop += i) {
-		for (i = 0; i < SNMP_EXTENDED_KEY_SIZ; i++)
-			authbuf[i] = passphrase[(loop + i) % passphrase_len];
-		if (EVP_DigestUpdate(&ctx, authbuf, SNMP_EXTENDED_KEY_SIZ) != 1)
-			goto failed;
-	}
+    for (loop = 0; loop < SNMP_AUTH_KEY_LOOPCNT; loop += i) {
+        for (i = 0; i < SNMP_EXTENDED_KEY_SIZ; i++)
+            authbuf[i] = passphrase[(loop + i) % passphrase_len];
+        if (EVP_DigestUpdate(&ctx, authbuf, SNMP_EXTENDED_KEY_SIZ) != 1)
+            goto failed;
+    }
 
-	if (EVP_DigestFinal(&ctx, out, out_len) != 1)
-		goto failed;
+    if (EVP_DigestFinal(&ctx, out, out_len) != 1)
+        goto failed;
 
-	EVP_MD_CTX_cleanup(&ctx);
-	return (SNMP_CODE_OK);
+    EVP_MD_CTX_cleanup(&ctx);
+    return (SNMP_CODE_OK);
 
 failed:
-	EVP_MD_CTX_cleanup(&ctx);
-	return (SNMP_CODE_BADDIGEST);
+    EVP_MD_CTX_cleanup(&ctx);
+    return (SNMP_CODE_BADDIGEST);
 }
 
 /* [RFC 3414] - 2.6. Key Localization Algorithm */
 static enum snmp_code snmp_passphrase_to_localization_keys(enum snmp_authentication auth_proto
-	, const uint8_t *eid, uint32_t elen, unsigned char* out, uint32_t* out_len)
-{
-	int err;
-	uint32_t  keylen;
-	const EVP_MD *dtype;
-	EVP_MD_CTX ctx;
-	uint8_t authbuf[SNMP_AUTH_BUF_SIZE];
+        , const uint8_t *eid, uint32_t elen, unsigned char* out, uint32_t* out_len) {
+    int err;
+    uint32_t  keylen;
+    const EVP_MD *dtype;
+    EVP_MD_CTX ctx;
+    uint8_t authbuf[SNMP_AUTH_BUF_SIZE];
 
-	if (out == NULL || eid == NULL || elen > SNMP_ENGINE_ID_SIZ)
-		return (SNMP_CODE_FAILED);
+    if (out == NULL || eid == NULL || elen > SNMP_ENGINE_ID_SIZ)
+        return (SNMP_CODE_FAILED);
 
 
-	err = snmp_digest_init(auth_proto, &ctx, &dtype, &keylen);
-	if (err < 0)
-		return (SNMP_CODE_BADDIGEST);
-	else if (err == 0)
-		return (SNMP_CODE_OK);
-	
-	if ((keylen + elen + *out_len) > SNMP_AUTH_BUF_SIZE)
-		return (SNMP_CODE_FAILED);
+    err = snmp_digest_init(auth_proto, &ctx, &dtype, &keylen);
+    if (err < 0)
+        return (SNMP_CODE_BADDIGEST);
+    else if (err == 0)
+        return (SNMP_CODE_OK);
 
-	memset(authbuf, 0, sizeof(authbuf));
-	memcpy(authbuf, out, *out_len);
-	memcpy(authbuf + keylen, eid, elen);
-	memcpy(authbuf + keylen + elen, out, *out_len);
+    if ((keylen + elen + *out_len) > SNMP_AUTH_BUF_SIZE)
+        return (SNMP_CODE_FAILED);
 
-	if (EVP_DigestUpdate(&ctx, authbuf, 2 * keylen + elen) != 1 ||
-	    EVP_DigestFinal(&ctx, out, out_len) != 1) {
-		EVP_MD_CTX_cleanup(&ctx);
-		return (SNMP_CODE_BADDIGEST);
-	}
-	EVP_MD_CTX_cleanup(&ctx);
-	return (SNMP_CODE_OK);
+    memset(authbuf, 0, sizeof(authbuf));
+    memcpy(authbuf, out, *out_len);
+    memcpy(authbuf + keylen, eid, elen);
+    memcpy(authbuf + keylen + elen, out, *out_len);
+
+    if (EVP_DigestUpdate(&ctx, authbuf, 2 * keylen + elen) != 1 ||
+            EVP_DigestFinal(&ctx, out, out_len) != 1) {
+        EVP_MD_CTX_cleanup(&ctx);
+        return (SNMP_CODE_BADDIGEST);
+    }
+    EVP_MD_CTX_cleanup(&ctx);
+    return (SNMP_CODE_OK);
 }
 
 enum snmp_code snmp_set_auth_passphrase(snmp_user_t *user
-	                            , const char *passphrase, size_t passphrase_len)   {
-	user->auth_len = sizeof(user->auth_key);
-	return snmp_passphrase_to_keys(user->auth_proto, passphrase
-		, passphrase_len, user->auth_key, &user->auth_len);
+                                        , const char *passphrase, size_t passphrase_len)   {
+    user->auth_len = sizeof(user->auth_key);
+    return snmp_passphrase_to_keys(user->auth_proto, passphrase
+                                   , passphrase_len, user->auth_key, &user->auth_len);
 }
 
 enum snmp_code snmp_set_priv_passphrase(snmp_user_t *user
-	                            , const char *passphrase, size_t passphrase_len)   {
-	user->priv_len = sizeof(user->priv_key);
-	return snmp_passphrase_to_keys(user->auth_proto, passphrase
-		, passphrase_len, user->priv_key, &user->priv_len);
+                                        , const char *passphrase, size_t passphrase_len)   {
+    user->priv_len = sizeof(user->priv_key);
+    return snmp_passphrase_to_keys(user->auth_proto, passphrase
+                                   , passphrase_len, user->priv_key, &user->priv_len);
 }
 
 enum snmp_code snmp_auth_to_localization_keys(snmp_user_t *user
-	                            , const uint8_t *eid, uint32_t elen)   {
-	return snmp_passphrase_to_localization_keys(user->auth_proto, eid
-		, elen, user->auth_key, &user->auth_len);
+        , const uint8_t *eid, uint32_t elen)   {
+    return snmp_passphrase_to_localization_keys(user->auth_proto, eid
+            , elen, user->auth_key, &user->auth_len);
 }
 
 enum snmp_code snmp_priv_to_localization_keys(snmp_user_t *user
-	                            , const uint8_t *eid, uint32_t elen)   {
-	return snmp_passphrase_to_localization_keys(user->auth_proto, eid
-		, elen, user->priv_key, &user->priv_len);
+        , const uint8_t *eid, uint32_t elen)   {
+    return snmp_passphrase_to_localization_keys(user->auth_proto, eid
+            , elen, user->priv_key, &user->priv_len);
 }
 
-enum snmp_code snmp_calc_keychange(snmp_user_t *user, uint8_t *keychange)
-{
-	int32_t err, rvalue[SNMP_AUTH_HMACSHA_KEY_SIZ / 4];
-	uint32_t i, keylen, olen;
-	const EVP_MD *dtype;
-	EVP_MD_CTX ctx;
+enum snmp_code snmp_calc_keychange(snmp_user_t *user, uint8_t *keychange) {
+    int32_t err, rvalue[SNMP_AUTH_HMACSHA_KEY_SIZ / 4];
+    uint32_t i, keylen, olen;
+    const EVP_MD *dtype;
+    EVP_MD_CTX ctx;
 
-	err = snmp_digest_init(user->auth_proto, &ctx, &dtype, &keylen);
-	if (err < 0)
-		return (SNMP_CODE_BADDIGEST);
-	else if (err == 0)
-		return (SNMP_CODE_OK);
+    err = snmp_digest_init(user->auth_proto, &ctx, &dtype, &keylen);
+    if (err < 0)
+        return (SNMP_CODE_BADDIGEST);
+    else if (err == 0)
+        return (SNMP_CODE_OK);
 
-	for (i = 0; i < keylen / 4; i++)
-		rvalue[i] = random();
-	
-	memcpy(keychange, user->auth_key, keylen);
-	memcpy(keychange + keylen, rvalue, keylen);
+    for (i = 0; i < keylen / 4; i++)
+        rvalue[i] = random();
 
-	if (EVP_DigestUpdate(&ctx, keychange, 2 * keylen) != 1 ||
-	    EVP_DigestFinal(&ctx, keychange, &olen) != 1) {
-		EVP_MD_CTX_cleanup(&ctx);
-		return (SNMP_CODE_BADDIGEST);
-	}
+    memcpy(keychange, user->auth_key, keylen);
+    memcpy(keychange + keylen, rvalue, keylen);
 
-	EVP_MD_CTX_cleanup(&ctx);
-	return (SNMP_CODE_OK);
+    if (EVP_DigestUpdate(&ctx, keychange, 2 * keylen) != 1 ||
+            EVP_DigestFinal(&ctx, keychange, &olen) != 1) {
+        EVP_MD_CTX_cleanup(&ctx);
+        return (SNMP_CODE_BADDIGEST);
+    }
+
+    EVP_MD_CTX_cleanup(&ctx);
+    return (SNMP_CODE_OK);
 }
 
 #else /* !HAVE_LIBCRYPTO */
 
 enum snmp_code
-snmp_pdu_calc_digest(const snmp_pdu_t *pdu, uint8_t *digest __unused)
-{
-	if  (pdu->user.auth_proto != SNMP_AUTH_NOAUTH)
-		return (SNMP_CODE_BADSECLEVEL);
+snmp_pdu_calc_digest(const snmp_pdu_t *pdu, uint8_t *digest __unused) {
+    if  (pdu->user.auth_proto != SNMP_AUTH_NOAUTH)
+        return (SNMP_CODE_BADSECLEVEL);
 
 
-	return (SNMP_CODE_OK);
+    return (SNMP_CODE_OK);
 }
 
 enum snmp_code
-snmp_pdu_encrypt(const snmp_pdu_t *pdu)
-{
-	if (pdu->user.priv_proto != SNMP_PRIV_NOPRIV)
-		return (SNMP_CODE_BADSECLEVEL);
+snmp_pdu_encrypt(const snmp_pdu_t *pdu) {
+    if (pdu->user.priv_proto != SNMP_PRIV_NOPRIV)
+        return (SNMP_CODE_BADSECLEVEL);
 
-	return (SNMP_CODE_OK);
+    return (SNMP_CODE_OK);
 }
 
 enum snmp_code
-snmp_pdu_decrypt(const snmp_pdu_t *pdu)
-{
-	if (pdu->user.priv_proto != SNMP_PRIV_NOPRIV)
-		return (SNMP_CODE_BADSECLEVEL);
+snmp_pdu_decrypt(const snmp_pdu_t *pdu) {
+    if (pdu->user.priv_proto != SNMP_PRIV_NOPRIV)
+        return (SNMP_CODE_BADSECLEVEL);
 
-	return (SNMP_CODE_OK);
+    return (SNMP_CODE_OK);
 }
 
 int
-snmp_passwd_to_keys(snmp_user_t *user, char *passwd __unused)
-{
-	if (user->auth_proto == SNMP_AUTH_NOAUTH &&
-	    user->priv_proto == SNMP_PRIV_NOPRIV)
-		return (SNMP_CODE_OK);
+snmp_passwd_to_keys(snmp_user_t *user, char *passwd __unused) {
+    if (user->auth_proto == SNMP_AUTH_NOAUTH &&
+            user->priv_proto == SNMP_PRIV_NOPRIV)
+        return (SNMP_CODE_OK);
 
-	return (SNMP_CODE_FAILED);
+    return (SNMP_CODE_FAILED);
 }
 
 int
 snmp_get_local_keys(snmp_user_t *user, uint8_t *eid __unused,
-    uint32_t elen __unused)
-{
-	if (user->auth_proto == SNMP_AUTH_NOAUTH &&
-	    user->priv_proto == SNMP_PRIV_NOPRIV)
-		return (SNMP_CODE_OK);
+                    uint32_t elen __unused) {
+    if (user->auth_proto == SNMP_AUTH_NOAUTH &&
+            user->priv_proto == SNMP_PRIV_NOPRIV)
+        return (SNMP_CODE_OK);
 
-	return (SNMP_CODE_FAILED);
+    return (SNMP_CODE_FAILED);
 }
 
 enum snmp_code snmp_set_auth_passphrase(snmp_user_t *user
-	                            , const char *passphrase, size_t passphrase_len)   {
+                                        , const char *passphrase, size_t passphrase_len)   {
 
-	if (user->auth_proto == SNMP_AUTH_NOAUTH &&
-	    user->priv_proto == SNMP_PRIV_NOPRIV)
-		return (SNMP_CODE_OK);
+    if (user->auth_proto == SNMP_AUTH_NOAUTH &&
+            user->priv_proto == SNMP_PRIV_NOPRIV)
+        return (SNMP_CODE_OK);
 
-	return (SNMP_CODE_FAILED);
+    return (SNMP_CODE_FAILED);
 }
 
 enum snmp_code snmp_set_priv_passphrase(snmp_user_t *user
-	                            , const char *passphrase, size_t passphrase_len)   {
+                                        , const char *passphrase, size_t passphrase_len)   {
 
-	if (user->auth_proto == SNMP_AUTH_NOAUTH &&
-	    user->priv_proto == SNMP_PRIV_NOPRIV)
-		return (SNMP_CODE_OK);
+    if (user->auth_proto == SNMP_AUTH_NOAUTH &&
+            user->priv_proto == SNMP_PRIV_NOPRIV)
+        return (SNMP_CODE_OK);
 
-	return (SNMP_CODE_FAILED);
+    return (SNMP_CODE_FAILED);
 }
 
 enum snmp_code snmp_auth_to_localization_keys(snmp_user_t *user
-	                            , const uint8_t *eid, uint32_t elen)   {
+        , const uint8_t *eid, uint32_t elen)   {
 
-	if (user->auth_proto == SNMP_AUTH_NOAUTH &&
-	    user->priv_proto == SNMP_PRIV_NOPRIV)
-		return (SNMP_CODE_OK);
+    if (user->auth_proto == SNMP_AUTH_NOAUTH &&
+            user->priv_proto == SNMP_PRIV_NOPRIV)
+        return (SNMP_CODE_OK);
 
-	return (SNMP_CODE_FAILED);
+    return (SNMP_CODE_FAILED);
 }
 
 enum snmp_code snmp_priv_to_localization_keys(snmp_user_t *user
-	                            , const uint8_t *eid, uint32_t elen)   {
+        , const uint8_t *eid, uint32_t elen)   {
 
-	if (user->auth_proto == SNMP_AUTH_NOAUTH &&
-	    user->priv_proto == SNMP_PRIV_NOPRIV)
-		return (SNMP_CODE_OK);
+    if (user->auth_proto == SNMP_AUTH_NOAUTH &&
+            user->priv_proto == SNMP_PRIV_NOPRIV)
+        return (SNMP_CODE_OK);
 
 
-	return (SNMP_CODE_FAILED);
+    return (SNMP_CODE_FAILED);
 }
 enum snmp_code
 snmp_calc_keychange(snmp_user_t *user __unused,
-    uint8_t *keychange __unused)
-{
-	return (SNMP_CODE_FAILED);
+                    uint8_t *keychange __unused) {
+    return (SNMP_CODE_FAILED);
 }
 
 #endif /* HAVE_LIBCRYPTO */

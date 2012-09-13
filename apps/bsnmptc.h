@@ -66,18 +66,18 @@
 #define	SNMP_INADDRS_STRSZ	INET6_ADDRSTRLEN
 
 enum snmp_tc {
-	SNMP_STRING = 0,
-	SNMP_DISPLAYSTRING = 1,
-	SNMP_DATEANDTIME = 2,
-	SNMP_PHYSADDR = 3,
-	SNMP_ATMESI = 4,
-	SNMP_NTP_TIMESTAMP = 5,
-	SNMP_MACADDRESS = 6,
-	SNMP_BRIDGE_ID = 7,
-	SNMP_BPORT_ID = 8,
-	SNMP_INETADDRESS = 9,
-	SNMP_TC_OWN = 10,
-	SNMP_UNKNOWN, /* keep last */
+    SNMP_STRING = 0,
+    SNMP_DISPLAYSTRING = 1,
+    SNMP_DATEANDTIME = 2,
+    SNMP_PHYSADDR = 3,
+    SNMP_ATMESI = 4,
+    SNMP_NTP_TIMESTAMP = 5,
+    SNMP_MACADDRESS = 6,
+    SNMP_BRIDGE_ID = 7,
+    SNMP_BPORT_ID = 8,
+    SNMP_INETADDRESS = 9,
+    SNMP_TC_OWN = 10,
+    SNMP_UNKNOWN, /* keep last */
 };
 
 typedef uint8_t * (*snmp_oct2tc_f) (uint32_t len, uint8_t *octs, uint8_t *buf);

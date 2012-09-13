@@ -4,7 +4,7 @@
 *	All rights reserved.
 *
 * Author: Harti Brandt <harti@freebsd.org>
-* 
+*
 * Copyright (c) 2010 The FreeBSD Foundation
 * All rights reserved.
 *
@@ -19,7 +19,7 @@
 * 2. Redistributions in binary form must reproduce the above copyright
 *    notice, this list of conditions and the following disclaimer in the
 *    documentation and/or other materials provided with the distribution.
-* 
+*
 * THIS SOFTWARE IS PROVIDED BY AUTHOR AND CONTRIBUTORS ``AS IS'' AND
 * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -79,26 +79,26 @@ static const struct {
     enum snmp_code code;
 } error_strings[] = {
     { "ok", SNMP_CODE_OK },
-	{ "failed", SNMP_CODE_FAILED },
-	{ "bad version", SNMP_CODE_BADVERS },
-	{ "bad len", SNMP_CODE_BADLEN },
-	{ "bad encode", SNMP_CODE_BADENC },
-	{ "oorange", SNMP_CODE_OORANGE },
-	{ "bad security level", SNMP_CODE_BADSECLEVEL },
-	{ "not in time window", SNMP_CODE_NOTINTIME },
-	{ "bad user", SNMP_CODE_BADUSER },
-	{ "bad engine", SNMP_CODE_BADENGINE },
-	{ "bad digest", SNMP_CODE_BADDIGEST },
-	{ "error decrypt ", SNMP_CODE_EDECRYPT },
-	{ "bad number of bindings ", SNMP_CODE_BADBINDINGNUMBER },
-	{ "bad result", SNMP_CODE_BADRESULT },
-	{ "bad oid", SNMP_CODE_BADOID },
+    { "failed", SNMP_CODE_FAILED },
+    { "bad version", SNMP_CODE_BADVERS },
+    { "bad len", SNMP_CODE_BADLEN },
+    { "bad encode", SNMP_CODE_BADENC },
+    { "oorange", SNMP_CODE_OORANGE },
+    { "bad security level", SNMP_CODE_BADSECLEVEL },
+    { "not in time window", SNMP_CODE_NOTINTIME },
+    { "bad user", SNMP_CODE_BADUSER },
+    { "bad engine", SNMP_CODE_BADENGINE },
+    { "bad digest", SNMP_CODE_BADDIGEST },
+    { "error decrypt ", SNMP_CODE_EDECRYPT },
+    { "bad number of bindings ", SNMP_CODE_BADBINDINGNUMBER },
+    { "bad result", SNMP_CODE_BADRESULT },
+    { "bad oid", SNMP_CODE_BADOID },
 
-	{ "bad syntax", SNMP_CODE_SYNTAX_MISMATCH },
-	
-	{ "no such object", SNMP_CODE_SYNTAX_NOSUCHOBJECT },	/* exception */
-	{ "no such instance ", SNMP_CODE_SYNTAX_NOSUCHINSTANCE },	/* exception */
-	{ "end of mib view ", SNMP_CODE_SYNTAX_ENDOFMIBVIEW },	/* exception */
+    { "bad syntax", SNMP_CODE_SYNTAX_MISMATCH },
+
+    { "no such object", SNMP_CODE_SYNTAX_NOSUCHOBJECT },	/* exception */
+    { "no such instance ", SNMP_CODE_SYNTAX_NOSUCHINSTANCE },	/* exception */
+    { "end of mib view ", SNMP_CODE_SYNTAX_ENDOFMIBVIEW },	/* exception */
     { "Too big ", SNMP_CODE_ERR_TOOBIG },
     { "No such Name", SNMP_CODE_ERR_NOSUCHNAME },
     { "Bad Value", SNMP_CODE_ERR_BADVALUE },
@@ -122,15 +122,14 @@ static const struct {
 };
 
 const char* snmp_get_error(enum snmp_code code) {
-	assert(code == error_strings[code].code);
-	return error_strings[code].str;
+    assert(code == error_strings[code].code);
+    return error_strings[code].str;
 }
 /*
 * Get the next variable binding from the list.
 * ASN errors on the sequence or the OID are always fatal.
 */
-static enum asn_err get_var_binding(asn_buf_t *b, snmp_value_t *binding)
-{
+static enum asn_err get_var_binding(asn_buf_t *b, snmp_value_t *binding) {
     u_char type;
     asn_len_t len, trailer;
     enum asn_err err;
@@ -176,8 +175,8 @@ static enum asn_err get_var_binding(asn_buf_t *b, snmp_value_t *binding)
         }
         binding->v.octetstring.len = len;
         err = asn_get_octetstring_raw(b, len,
-            binding->v.octetstring.octets,
-            &binding->v.octetstring.len);
+                                      binding->v.octetstring.octets,
+                                      &binding->v.octetstring.len);
         if (ASN_ERR_STOPPED(err)) {
             free(binding->v.octetstring.octets);
             binding->v.octetstring.octets = NULL;
@@ -255,8 +254,7 @@ static enum asn_err get_var_binding(asn_buf_t *b, snmp_value_t *binding)
 * components can be parsed it returns either ASN_ERR_OK or the first
 * error that was found.
 */
-enum asn_err snmp_parse_pdus_hdr(asn_buf_t *b, snmp_pdu_t *pdu, asn_len_t *lenp)
-{
+enum asn_err snmp_parse_pdus_hdr(asn_buf_t *b, snmp_pdu_t *pdu, asn_len_t *lenp) {
     if (pdu->pdu_type == SNMP_PDU_TRAP) {
         if (asn_get_objid(b, &pdu->enterprise) != ASN_ERR_OK) {
             snmp_error("cannot parse trap enterprise");
@@ -301,8 +299,7 @@ enum asn_err snmp_parse_pdus_hdr(asn_buf_t *b, snmp_pdu_t *pdu, asn_len_t *lenp)
     return (ASN_ERR_OK);
 }
 
-static enum asn_err parse_pdus(asn_buf_t *b, snmp_pdu_t *pdu, int32_t *ip)
-{
+static enum asn_err parse_pdus(asn_buf_t *b, snmp_pdu_t *pdu, int32_t *ip) {
     asn_len_t len, trailer;
     snmp_value_t *v;
     enum asn_err err, err1;
@@ -318,7 +315,7 @@ static enum asn_err parse_pdus(asn_buf_t *b, snmp_pdu_t *pdu, int32_t *ip)
     while (b->asn_len != 0) {
         if (pdu->nbindings == SNMP_MAX_BINDINGS) {
             snmp_error("too many bindings (> %u) in PDU",
-                SNMP_MAX_BINDINGS);
+                       SNMP_MAX_BINDINGS);
             return (ASN_ERR_FAILED);
         }
         err1 = get_var_binding(b, v);
@@ -338,8 +335,7 @@ static enum asn_err parse_pdus(asn_buf_t *b, snmp_pdu_t *pdu, int32_t *ip)
 }
 
 
-static enum asn_err parse_secparams(asn_buf_t *b, snmp_pdu_t *pdu)
-{
+static enum asn_err parse_secparams(asn_buf_t *b, snmp_pdu_t *pdu) {
     asn_len_t octs_len;
     u_char buf[256]; /* XXX: calc max possible size here */
     asn_buf_t tb;
@@ -360,9 +356,9 @@ static enum asn_err parse_secparams(asn_buf_t *b, snmp_pdu_t *pdu)
 
     octs_len = SNMP_ENGINE_ID_SIZ;
     if (asn_get_octetstring(&tb, (u_char *)&pdu->engine.engine_id,
-        &octs_len) != ASN_ERR_OK) {
-            snmp_error("cannot decode msg engine id");
-            return (ASN_ERR_FAILED);
+                            &octs_len) != ASN_ERR_OK) {
+        snmp_error("cannot decode msg engine id");
+        return (ASN_ERR_FAILED);
     }
     pdu->engine.engine_len = octs_len;
 
@@ -378,26 +374,26 @@ static enum asn_err parse_secparams(asn_buf_t *b, snmp_pdu_t *pdu)
 
     octs_len = SNMP_ADM_STR32_SIZ - 1;
     if (asn_get_octetstring(&tb, (u_char *)&pdu->user.sec_name, &octs_len)
-        != ASN_ERR_OK) {
-            snmp_error("cannot decode msg user name");
-            return (ASN_ERR_FAILED);
+            != ASN_ERR_OK) {
+        snmp_error("cannot decode msg user name");
+        return (ASN_ERR_FAILED);
     }
     pdu->user.sec_name[octs_len] = '\0';
 
     octs_len = sizeof(pdu->msg_digest);
     if (asn_get_octetstring(&tb, (u_char *)&pdu->msg_digest, &octs_len) !=
-        ASN_ERR_OK || ((pdu->flags & SNMP_MSG_AUTH_FLAG) != 0 &&
-        octs_len != sizeof(pdu->msg_digest))) {
-            snmp_error("cannot decode msg authentication param");
-            return (ASN_ERR_FAILED);
+            ASN_ERR_OK || ((pdu->flags & SNMP_MSG_AUTH_FLAG) != 0 &&
+                           octs_len != sizeof(pdu->msg_digest))) {
+        snmp_error("cannot decode msg authentication param");
+        return (ASN_ERR_FAILED);
     }
 
     octs_len = sizeof(pdu->msg_salt);
     if (asn_get_octetstring(&tb, (u_char *)&pdu->msg_salt, &octs_len) !=
-        ASN_ERR_OK ||((pdu->flags & SNMP_MSG_PRIV_FLAG) != 0 &&
-        octs_len != sizeof(pdu->msg_salt))) {
-            snmp_error("cannot decode msg authentication param");
-            return (ASN_ERR_FAILED);
+            ASN_ERR_OK ||((pdu->flags & SNMP_MSG_PRIV_FLAG) != 0 &&
+                          octs_len != sizeof(pdu->msg_salt))) {
+        snmp_error("cannot decode msg authentication param");
+        return (ASN_ERR_FAILED);
     }
 
     if ((pdu->flags & SNMP_MSG_AUTH_FLAG) != 0) {
@@ -408,8 +404,7 @@ static enum asn_err parse_secparams(asn_buf_t *b, snmp_pdu_t *pdu)
     return (ASN_ERR_OK);
 }
 
-static enum snmp_code pdu_encode_secparams(asn_buf_t *b, snmp_pdu_t *pdu)
-{
+static enum snmp_code pdu_encode_secparams(asn_buf_t *b, snmp_pdu_t *pdu) {
     u_char buf[256], *sptr;
     asn_buf_t tb;
     size_t auth_off, moved = 0;
@@ -420,11 +415,11 @@ static enum snmp_code pdu_encode_secparams(asn_buf_t *b, snmp_pdu_t *pdu)
     tb.asn_len = 256;
 
     if (asn_put_temp_header(&tb, (ASN_TYPE_SEQUENCE|ASN_TYPE_CONSTRUCTED),
-        &sptr) != ASN_ERR_OK)
+                            &sptr) != ASN_ERR_OK)
         return (SNMP_CODE_FAILED);
 
     if (asn_put_octetstring(&tb, (u_char *)pdu->engine.engine_id,
-        pdu->engine.engine_len) != ASN_ERR_OK)
+                            pdu->engine.engine_len) != ASN_ERR_OK)
         return (SNMP_CODE_FAILED);
 
     if (asn_put_integer(&tb, pdu->engine.engine_boots) != ASN_ERR_OK)
@@ -434,27 +429,27 @@ static enum snmp_code pdu_encode_secparams(asn_buf_t *b, snmp_pdu_t *pdu)
         return (SNMP_CODE_FAILED);
 
     if (asn_put_octetstring(&tb, (u_char *)pdu->user.sec_name,
-        strlen(pdu->user.sec_name)) != ASN_ERR_OK)
+                            strlen(pdu->user.sec_name)) != ASN_ERR_OK)
         return (SNMP_CODE_FAILED);
 
     if ((pdu->flags & SNMP_MSG_AUTH_FLAG) != 0) {
         auth_off = sizeof(buf) - tb.asn_len + ASN_MAXLENLEN;
         if (asn_put_octetstring(&tb, (u_char *)pdu->msg_digest,
-            sizeof(pdu->msg_digest)) != ASN_ERR_OK)
+                                sizeof(pdu->msg_digest)) != ASN_ERR_OK)
             return (SNMP_CODE_FAILED);
     } else {
         if (asn_put_octetstring(&tb, (u_char *)pdu->msg_digest, 0)
-            != ASN_ERR_OK)
+                != ASN_ERR_OK)
             return (SNMP_CODE_FAILED);
     }
 
     if ((pdu->flags & SNMP_MSG_PRIV_FLAG) != 0) {
         if (asn_put_octetstring(&tb, (u_char *)pdu->msg_salt,
-            sizeof(pdu->msg_salt)) != ASN_ERR_OK)
+                                sizeof(pdu->msg_salt)) != ASN_ERR_OK)
             return (SNMP_CODE_FAILED);
     } else {
         if (asn_put_octetstring(&tb, (u_char *)pdu->msg_salt, 0)
-            != ASN_ERR_OK)
+                != ASN_ERR_OK)
             return (SNMP_CODE_FAILED);
     }
 
@@ -469,7 +464,7 @@ static enum snmp_code pdu_encode_secparams(asn_buf_t *b, snmp_pdu_t *pdu)
     pdu->digest_ptr += ASN_MAXLENLEN;
 
     if ((pdu->flags & SNMP_MSG_PRIV_FLAG) != 0 && asn_put_temp_header(b,
-        ASN_TYPE_OCTETSTRING, &pdu->encrypted_ptr) != ASN_ERR_OK)
+            ASN_TYPE_OCTETSTRING, &pdu->encrypted_ptr) != ASN_ERR_OK)
         return (SNMP_CODE_FAILED);
 
     return (SNMP_CODE_OK);
@@ -481,8 +476,7 @@ static enum snmp_code pdu_encode_secparams(asn_buf_t *b, snmp_pdu_t *pdu)
 * decoded, ip points to the index of the failed variable (errors
 * OORANGE, BADLEN or BADVERS).
 */
-enum snmp_code snmp_pdu_decode(asn_buf_t *b, snmp_pdu_t *pdu, int32_t *ip)
-{
+enum snmp_code snmp_pdu_decode(asn_buf_t *b, snmp_pdu_t *pdu, int32_t *ip) {
     enum snmp_code code;
 
     if ((code = snmp_pdu_decode_header(b, pdu)) != SNMP_CODE_OK)
@@ -513,8 +507,7 @@ enum snmp_code snmp_pdu_decode(asn_buf_t *b, snmp_pdu_t *pdu, int32_t *ip)
     return (code);
 }
 
-enum snmp_code snmp_pdu_decode_header(asn_buf_t *b, snmp_pdu_t *pdu)
-{
+enum snmp_code snmp_pdu_decode_header(asn_buf_t *b, snmp_pdu_t *pdu) {
     int32_t version;
     u_int octs_len;
     asn_len_t len;
@@ -564,16 +557,16 @@ enum snmp_code snmp_pdu_decode_header(asn_buf_t *b, snmp_pdu_t *pdu)
         }
 
         if (asn_get_integer(b, &pdu->engine.max_msg_size)
-            != ASN_ERR_OK) {
-                snmp_error("cannot decode msg size");
-                return (SNMP_CODE_FAILED);
+                != ASN_ERR_OK) {
+            snmp_error("cannot decode msg size");
+            return (SNMP_CODE_FAILED);
         }
 
         octs_len = 1;
         if (asn_get_octetstring(b, (u_char *)&pdu->flags,
-            &octs_len) != ASN_ERR_OK) {
-                snmp_error("cannot decode msg flags");
-                return (SNMP_CODE_FAILED);
+                                &octs_len) != ASN_ERR_OK) {
+            snmp_error("cannot decode msg flags");
+            return (SNMP_CODE_FAILED);
         }
 
         if (asn_get_integer(b, &pdu->security_model) != ASN_ERR_OK) {
@@ -589,9 +582,9 @@ enum snmp_code snmp_pdu_decode_header(asn_buf_t *b, snmp_pdu_t *pdu)
     } else {
         octs_len = SNMP_COMMUNITY_MAXLEN;
         if (asn_get_octetstring(b, (u_char *)pdu->community,
-            &octs_len) != ASN_ERR_OK) {
-                snmp_error("cannot decode community");
-                return (SNMP_CODE_FAILED);
+                                &octs_len) != ASN_ERR_OK) {
+            snmp_error("cannot decode community");
+            return (SNMP_CODE_FAILED);
         }
         pdu->community[octs_len] = '\0';
     }
@@ -599,8 +592,7 @@ enum snmp_code snmp_pdu_decode_header(asn_buf_t *b, snmp_pdu_t *pdu)
     return (SNMP_CODE_OK);
 }
 
-enum snmp_code snmp_pdu_decode_scoped(asn_buf_t *b, snmp_pdu_t *pdu, int32_t *ip)
-{
+enum snmp_code snmp_pdu_decode_scoped(asn_buf_t *b, snmp_pdu_t *pdu, int32_t *ip) {
     u_char type;
     asn_len_t len, trailer;
     enum asn_err err;
@@ -613,17 +605,17 @@ enum snmp_code snmp_pdu_decode_scoped(asn_buf_t *b, snmp_pdu_t *pdu, int32_t *ip
 
         len = SNMP_ENGINE_ID_SIZ;
         if (asn_get_octetstring(b, (u_char *)&pdu->context_engine,
-            &len) != ASN_ERR_OK) {
-                snmp_error("cannot decode msg context engine");
-                return (SNMP_CODE_FAILED);
+                                &len) != ASN_ERR_OK) {
+            snmp_error("cannot decode msg context engine");
+            return (SNMP_CODE_FAILED);
         }
         pdu->context_engine_len = len;
 
         len = SNMP_CONTEXT_NAME_SIZ;
         if (asn_get_octetstring(b, (u_char *)&pdu->context_name,
-            &len) != ASN_ERR_OK) {
-                snmp_error("cannot decode msg context name");
-                return (SNMP_CODE_FAILED);
+                                &len) != ASN_ERR_OK) {
+            snmp_error("cannot decode msg context name");
+            return (SNMP_CODE_FAILED);
         }
         pdu->context_name[len] = '\0';
     }
@@ -633,9 +625,9 @@ enum snmp_code snmp_pdu_decode_scoped(asn_buf_t *b, snmp_pdu_t *pdu, int32_t *ip
         return (SNMP_CODE_FAILED);
     }
     if ((type & ~ASN_TYPE_MASK) !=
-        (ASN_TYPE_CONSTRUCTED | ASN_CLASS_CONTEXT)) {
-            snmp_error("bad pdu header tag");
-            return (SNMP_CODE_FAILED);
+            (ASN_TYPE_CONSTRUCTED | ASN_CLASS_CONTEXT)) {
+        snmp_error("bad pdu header tag");
+        return (SNMP_CODE_FAILED);
     }
     pdu->pdu_type = type & ASN_TYPE_MASK;
 
@@ -684,32 +676,31 @@ enum snmp_code snmp_pdu_decode_scoped(asn_buf_t *b, snmp_pdu_t *pdu, int32_t *ip
     return (SNMP_CODE_OK);
 }
 
-enum snmp_code snmp_pdu_decode_secmode(asn_buf_t *b, snmp_pdu_t *pdu)
-{
+enum snmp_code snmp_pdu_decode_secmode(asn_buf_t *b, snmp_pdu_t *pdu) {
     u_char type;
     enum snmp_code code;
     uint8_t	digest[SNMP_USM_AUTH_SIZE];
 
     if (pdu->user.auth_proto != SNMP_AUTH_NOAUTH &&
-        (pdu->flags & SNMP_MSG_AUTH_FLAG) == 0)
+            (pdu->flags & SNMP_MSG_AUTH_FLAG) == 0)
         return (SNMP_CODE_BADSECLEVEL);
 
     if ((code = snmp_pdu_calc_digest(pdu, digest)) != SNMP_CODE_OK)
         return (SNMP_CODE_FAILED);
 
     if (pdu->user.auth_proto != SNMP_AUTH_NOAUTH &&
-        memcmp(digest, pdu->msg_digest, sizeof(pdu->msg_digest)) != 0)
+            memcmp(digest, pdu->msg_digest, sizeof(pdu->msg_digest)) != 0)
         return (SNMP_CODE_BADDIGEST);
 
     if (pdu->user.priv_proto != SNMP_PRIV_NOPRIV && (asn_get_header(b, &type,
-        &pdu->scoped_len) != ASN_ERR_OK || type != ASN_TYPE_OCTETSTRING)) {
-            snmp_error("cannot decode encrypted pdu");
-            return (SNMP_CODE_FAILED);
+            &pdu->scoped_len) != ASN_ERR_OK || type != ASN_TYPE_OCTETSTRING)) {
+        snmp_error("cannot decode encrypted pdu");
+        return (SNMP_CODE_FAILED);
     }
     pdu->scoped_ptr = b->asn_ptr;
 
     if (pdu->user.priv_proto != SNMP_PRIV_NOPRIV &&
-        (pdu->flags & SNMP_MSG_PRIV_FLAG) == 0)
+            (pdu->flags & SNMP_MSG_PRIV_FLAG) == 0)
         return (SNMP_CODE_BADSECLEVEL);
 
     if ((code = snmp_pdu_decrypt(pdu)) != SNMP_CODE_OK)
@@ -725,8 +716,7 @@ enum snmp_code snmp_pdu_decode_secmode(asn_buf_t *b, snmp_pdu_t *pdu)
 *    0		if we need more data
 *  > 0		the length of this PDU
 */
-int snmp_pdu_snoop(const asn_buf_t *b0)
-{
+int snmp_pdu_snoop(const asn_buf_t *b0) {
     u_int length;
     asn_len_t len;
     asn_buf_t b = *b0;
@@ -782,13 +772,12 @@ int snmp_pdu_snoop(const asn_buf_t *b0)
 * use more than 2 bytes.
 * We need a number of pointers to apply the fixes afterwards.
 */
-enum snmp_code snmp_pdu_encode_header(asn_buf_t *b, snmp_pdu_t *pdu)
-{
+enum snmp_code snmp_pdu_encode_header(asn_buf_t *b, snmp_pdu_t *pdu) {
     enum asn_err err;
     u_char *v3_hdr_ptr;
 
     if (asn_put_temp_header(b, (ASN_TYPE_SEQUENCE|ASN_TYPE_CONSTRUCTED),
-        &pdu->outer_ptr) != ASN_ERR_OK)
+                            &pdu->outer_ptr) != ASN_ERR_OK)
         return (SNMP_CODE_FAILED);
 
     if (pdu->version == SNMP_V1)
@@ -804,7 +793,7 @@ enum snmp_code snmp_pdu_encode_header(asn_buf_t *b, snmp_pdu_t *pdu)
 
     if (pdu->version == SNMP_V3) {
         if (asn_put_temp_header(b, (ASN_TYPE_SEQUENCE |
-            ASN_TYPE_CONSTRUCTED), &v3_hdr_ptr) != ASN_ERR_OK)
+                                    ASN_TYPE_CONSTRUCTED), &v3_hdr_ptr) != ASN_ERR_OK)
             return (SNMP_CODE_FAILED);
 
         if (asn_put_integer(b, pdu->identifier) != ASN_ERR_OK)
@@ -814,13 +803,13 @@ enum snmp_code snmp_pdu_encode_header(asn_buf_t *b, snmp_pdu_t *pdu)
             return (SNMP_CODE_FAILED);
 
         if (pdu->pdu_type != SNMP_PDU_RESPONSE &&
-            pdu->pdu_type != SNMP_PDU_TRAP &&
-            pdu->pdu_type != SNMP_PDU_TRAP2 &&
-            pdu->pdu_type != SNMP_PDU_REPORT)
+                pdu->pdu_type != SNMP_PDU_TRAP &&
+                pdu->pdu_type != SNMP_PDU_TRAP2 &&
+                pdu->pdu_type != SNMP_PDU_REPORT)
             pdu->flags |= SNMP_MSG_REPORT_FLAG;
 
         if (asn_put_octetstring(b, (u_char *)&pdu->flags, 1)
-            != ASN_ERR_OK)
+                != ASN_ERR_OK)
             return (SNMP_CODE_FAILED);
 
         if (asn_put_integer(b, pdu->security_model) != ASN_ERR_OK)
@@ -837,56 +826,55 @@ enum snmp_code snmp_pdu_encode_header(asn_buf_t *b, snmp_pdu_t *pdu)
 
         /*  View-based Access Conntrol information */
         if (asn_put_temp_header(b, (ASN_TYPE_SEQUENCE |
-            ASN_TYPE_CONSTRUCTED), &pdu->scoped_ptr) != ASN_ERR_OK)
+                                    ASN_TYPE_CONSTRUCTED), &pdu->scoped_ptr) != ASN_ERR_OK)
             return (SNMP_CODE_FAILED);
 
         if (asn_put_octetstring(b, (u_char *)pdu->context_engine,
-            pdu->context_engine_len) != ASN_ERR_OK)
+                                pdu->context_engine_len) != ASN_ERR_OK)
             return (SNMP_CODE_FAILED);
 
         if (asn_put_octetstring(b, (u_char *)pdu->context_name,
-            strlen(pdu->context_name)) != ASN_ERR_OK)
+                                strlen(pdu->context_name)) != ASN_ERR_OK)
             return (SNMP_CODE_FAILED);
     } else {
         if (asn_put_octetstring(b, (u_char *)pdu->community,
-            strlen(pdu->community)) != ASN_ERR_OK)
+                                strlen(pdu->community)) != ASN_ERR_OK)
             return (SNMP_CODE_FAILED);
     }
 
     if (asn_put_temp_header(b, (ASN_TYPE_CONSTRUCTED | ASN_CLASS_CONTEXT |
-        pdu->pdu_type), &pdu->pdu_ptr) != ASN_ERR_OK)
+                                pdu->pdu_type), &pdu->pdu_ptr) != ASN_ERR_OK)
         return (SNMP_CODE_FAILED);
 
     if (pdu->pdu_type == SNMP_PDU_TRAP) {
         if (pdu->version != SNMP_V1 ||
-            asn_put_objid(b, &pdu->enterprise) != ASN_ERR_OK ||
-            asn_put_ipaddress(b, pdu->agent_addr) != ASN_ERR_OK ||
-            asn_put_integer(b, pdu->generic_trap) != ASN_ERR_OK ||
-            asn_put_integer(b, pdu->specific_trap) != ASN_ERR_OK ||
-            asn_put_timeticks(b, pdu->time_stamp) != ASN_ERR_OK)
+                asn_put_objid(b, &pdu->enterprise) != ASN_ERR_OK ||
+                asn_put_ipaddress(b, pdu->agent_addr) != ASN_ERR_OK ||
+                asn_put_integer(b, pdu->generic_trap) != ASN_ERR_OK ||
+                asn_put_integer(b, pdu->specific_trap) != ASN_ERR_OK ||
+                asn_put_timeticks(b, pdu->time_stamp) != ASN_ERR_OK)
             return (SNMP_CODE_FAILED);
     } else {
         if (pdu->version == SNMP_V1 && (pdu->pdu_type == SNMP_PDU_GETBULK ||
-            pdu->pdu_type == SNMP_PDU_INFORM ||
-            pdu->pdu_type == SNMP_PDU_TRAP2 ||
-            pdu->pdu_type == SNMP_PDU_REPORT))
+                                        pdu->pdu_type == SNMP_PDU_INFORM ||
+                                        pdu->pdu_type == SNMP_PDU_TRAP2 ||
+                                        pdu->pdu_type == SNMP_PDU_REPORT))
             return (SNMP_CODE_FAILED);
 
         if (asn_put_integer(b, pdu->request_id) != ASN_ERR_OK ||
-            asn_put_integer(b, pdu->error_status) != ASN_ERR_OK ||
-            asn_put_integer(b, pdu->error_index) != ASN_ERR_OK)
+                asn_put_integer(b, pdu->error_status) != ASN_ERR_OK ||
+                asn_put_integer(b, pdu->error_index) != ASN_ERR_OK)
             return (SNMP_CODE_FAILED);
     }
 
     if (asn_put_temp_header(b, (ASN_TYPE_SEQUENCE|ASN_TYPE_CONSTRUCTED),
-        &pdu->vars_ptr) != ASN_ERR_OK)
+                            &pdu->vars_ptr) != ASN_ERR_OK)
         return (SNMP_CODE_FAILED);
 
     return (SNMP_CODE_OK);
 }
 
-static enum asn_err snmp_pdu_fix_padd(asn_buf_t *b, snmp_pdu_t *pdu)
-{
+static enum asn_err snmp_pdu_fix_padd(asn_buf_t *b, snmp_pdu_t *pdu) {
     asn_len_t padlen;
 
     if (pdu->user.priv_proto == SNMP_PRIV_DES && pdu->scoped_len % 8 != 0) {
@@ -899,13 +887,12 @@ static enum asn_err snmp_pdu_fix_padd(asn_buf_t *b, snmp_pdu_t *pdu)
     return (ASN_ERR_OK);
 }
 
-enum snmp_code snmp_fix_encoding(asn_buf_t *b, snmp_pdu_t *pdu)
-{
+enum snmp_code snmp_fix_encoding(asn_buf_t *b, snmp_pdu_t *pdu) {
     size_t moved = 0;
     enum snmp_code code;
 
     if (asn_commit_header(b, pdu->vars_ptr, NULL) != ASN_ERR_OK ||
-        asn_commit_header(b, pdu->pdu_ptr, NULL) != ASN_ERR_OK)
+            asn_commit_header(b, pdu->pdu_ptr, NULL) != ASN_ERR_OK)
         return (SNMP_CODE_FAILED);
 
     if (pdu->version == SNMP_V3) {
@@ -923,7 +910,7 @@ enum snmp_code snmp_fix_encoding(asn_buf_t *b, snmp_pdu_t *pdu)
             return (SNMP_CODE_FAILED);
 
         if (pdu->user.priv_proto != SNMP_PRIV_NOPRIV &&
-            asn_commit_header(b, pdu->encrypted_ptr, NULL) != ASN_ERR_OK)
+                asn_commit_header(b, pdu->encrypted_ptr, NULL) != ASN_ERR_OK)
             return (SNMP_CODE_FAILED);
     }
 
@@ -935,12 +922,12 @@ enum snmp_code snmp_fix_encoding(asn_buf_t *b, snmp_pdu_t *pdu)
 
     if (pdu->version == SNMP_V3) {
         if ((code = snmp_pdu_calc_digest(pdu, pdu->msg_digest)) !=
-            SNMP_CODE_OK)
+                SNMP_CODE_OK)
             return (SNMP_CODE_FAILED);
 
         if ((pdu->flags & SNMP_MSG_AUTH_FLAG) != 0)
             memcpy(pdu->digest_ptr, pdu->msg_digest,
-            sizeof(pdu->msg_digest));
+                   sizeof(pdu->msg_digest));
     }
 
     return (SNMP_CODE_OK);
@@ -950,16 +937,15 @@ enum snmp_code snmp_fix_encoding(asn_buf_t *b, snmp_pdu_t *pdu)
 * Encode a binding. Caller must ensure, that the syntax is ok for that version.
 * Be sure not to cobber b, when something fails.
 */
-enum asn_err snmp_binding_encode(asn_buf_t *b, const snmp_value_t *binding)
-{
+enum asn_err snmp_binding_encode(asn_buf_t *b, const snmp_value_t *binding) {
     u_char *ptr;
     enum asn_err err;
     asn_buf_t save = *b;
 
     if ((err = asn_put_temp_header(b, (ASN_TYPE_SEQUENCE |
-        ASN_TYPE_CONSTRUCTED), &ptr)) != ASN_ERR_OK) {
-            *b = save;
-            return (err);
+                                       ASN_TYPE_CONSTRUCTED), &ptr)) != ASN_ERR_OK) {
+        *b = save;
+        return (err);
     }
 
     if ((err = asn_put_objid(b, &binding->var)) != ASN_ERR_OK) {
@@ -979,7 +965,7 @@ enum asn_err snmp_binding_encode(asn_buf_t *b, const snmp_value_t *binding)
 
     case SNMP_SYNTAX_OCTETSTRING:
         err = asn_put_octetstring(b, binding->v.octetstring.octets,
-            binding->v.octetstring.len);
+                                  binding->v.octetstring.len);
         break;
 
     case SNMP_SYNTAX_OID:
@@ -1036,8 +1022,7 @@ enum asn_err snmp_binding_encode(asn_buf_t *b, const snmp_value_t *binding)
 /*
 * Encode an PDU.
 */
-enum snmp_code snmp_pdu_encode(snmp_pdu_t *pdu, asn_buf_t *resp_b)
-{
+enum snmp_code snmp_pdu_encode(snmp_pdu_t *pdu, asn_buf_t *resp_b) {
     u_int idx;
     enum snmp_code err;
 
@@ -1045,14 +1030,13 @@ enum snmp_code snmp_pdu_encode(snmp_pdu_t *pdu, asn_buf_t *resp_b)
         return (err);
     for (idx = 0; idx < pdu->nbindings; idx++)
         if ((err = snmp_binding_encode(resp_b, &pdu->bindings[idx]))
-            != ASN_ERR_OK)
+                != ASN_ERR_OK)
             return (SNMP_CODE_FAILED);
 
     return (snmp_fix_encoding(resp_b, pdu));
 }
 
-static void dump_binding(const snmp_value_t *b)
-{
+static void dump_binding(const snmp_value_t *b) {
     u_int i;
     char buf[ASN_OIDSTRLEN];
 
@@ -1079,7 +1063,7 @@ static void dump_binding(const snmp_value_t *b)
 
     case SNMP_SYNTAX_IPADDRESS:
         snmp_printf("IPADDRESS %u.%u.%u.%u", b->v.ipaddress[0],
-            b->v.ipaddress[1], b->v.ipaddress[2], b->v.ipaddress[3]);
+                    b->v.ipaddress[1], b->v.ipaddress[2], b->v.ipaddress[3]);
         break;
 
     case SNMP_SYNTAX_COUNTER:
@@ -1116,8 +1100,7 @@ static void dump_binding(const snmp_value_t *b)
     }
 }
 
-static __inline void dump_bindings(const snmp_pdu_t *pdu)
-{
+static __inline void dump_bindings(const snmp_pdu_t *pdu) {
     u_int i;
 
     for (i = 0; i < pdu->nbindings; i++) {
@@ -1127,19 +1110,17 @@ static __inline void dump_bindings(const snmp_pdu_t *pdu)
     }
 }
 
-static __inline void dump_notrap(const snmp_pdu_t *pdu)
-{
+static __inline void dump_notrap(const snmp_pdu_t *pdu) {
     snmp_printf(" request_id=%d", pdu->request_id);
     snmp_printf(" error_status=%d", pdu->error_status);
     snmp_printf(" error_index=%d\n", pdu->error_index);
     dump_bindings(pdu);
 }
 
-void snmp_pdu_dump(const snmp_pdu_t *pdu)
-{
+void snmp_pdu_dump(const snmp_pdu_t *pdu) {
     char buf[ASN_OIDSTRLEN];
     const char *vers;
-    static const char *types[9]; 
+    static const char *types[9];
 
     types[SNMP_PDU_GET]      =	"GET";
     types[SNMP_PDU_GETNEXT]  =	"GETNEXT";
@@ -1165,7 +1146,7 @@ void snmp_pdu_dump(const snmp_pdu_t *pdu)
         snmp_printf("%s %s '%s'", types[pdu->pdu_type], vers, pdu->community);
         snmp_printf(" enterprise=%s", asn_oid2str_r(&pdu->enterprise, buf));
         snmp_printf(" agent_addr=%u.%u.%u.%u", pdu->agent_addr[0],
-            pdu->agent_addr[1], pdu->agent_addr[2], pdu->agent_addr[3]);
+                    pdu->agent_addr[1], pdu->agent_addr[2], pdu->agent_addr[3]);
         snmp_printf(" generic_trap=%d", pdu->generic_trap);
         snmp_printf(" specific_trap=%d", pdu->specific_trap);
         snmp_printf(" time-stamp=%u\n", pdu->time_stamp);
@@ -1190,20 +1171,17 @@ void snmp_pdu_dump(const snmp_pdu_t *pdu)
     }
 }
 
-void snmp_pdu_init(snmp_pdu_t *pdu)
-{
+void snmp_pdu_init(snmp_pdu_t *pdu) {
     memset(pdu, 0, sizeof(*pdu));
 }
 
-void snmp_value_free(snmp_value_t *value)
-{
+void snmp_value_free(snmp_value_t *value) {
     if (value->syntax == SNMP_SYNTAX_OCTETSTRING)
         free(value->v.octetstring.octets);
     value->syntax = SNMP_SYNTAX_NULL;
 }
 
-int snmp_value_copy(snmp_value_t *to, const snmp_value_t *from)
-{
+int snmp_value_copy(snmp_value_t *to, const snmp_value_t *from) {
     to->var = from->var;
     to->syntax = from->syntax;
 
@@ -1215,15 +1193,14 @@ int snmp_value_copy(snmp_value_t *to, const snmp_value_t *from)
             if (to->v.octetstring.octets == NULL)
                 return (-1);
             (void)memcpy(to->v.octetstring.octets,
-                from->v.octetstring.octets, to->v.octetstring.len);
+                         from->v.octetstring.octets, to->v.octetstring.len);
         }
     } else
         to->v = from->v;
     return (0);
 }
 
-void snmp_pdu_init_secparams(snmp_pdu_t *pdu)
-{
+void snmp_pdu_init_secparams(snmp_pdu_t *pdu) {
     int32_t rval;
 
     if (pdu->user.auth_proto != SNMP_AUTH_NOAUTH)
@@ -1232,10 +1209,10 @@ void snmp_pdu_init_secparams(snmp_pdu_t *pdu)
     switch (pdu->user.priv_proto) {
     case SNMP_PRIV_DES:
         memcpy(pdu->msg_salt, &pdu->engine.engine_boots,
-            sizeof(pdu->engine.engine_boots));
+               sizeof(pdu->engine.engine_boots));
         rval = random();
         memcpy(pdu->msg_salt + sizeof(pdu->engine.engine_boots), &rval,
-            sizeof(int32_t));
+               sizeof(int32_t));
         pdu->flags |= SNMP_MSG_PRIV_FLAG;
         break;
     case SNMP_PRIV_AES:
@@ -1250,8 +1227,7 @@ void snmp_pdu_init_secparams(snmp_pdu_t *pdu)
     }
 }
 
-void snmp_pdu_free(snmp_pdu_t *pdu)
-{
+void snmp_pdu_free(snmp_pdu_t *pdu) {
     u_int i;
 
     for (i = 0; i < pdu->nbindings; i++)
@@ -1261,8 +1237,7 @@ void snmp_pdu_free(snmp_pdu_t *pdu)
 /*
 * Parse an ASCII SNMP value into the binary form
 */
-int snmp_value_parse(const char *str, enum snmp_syntax syntax, snmp_values_t *v)
-{
+int snmp_value_parse(const char *str, enum snmp_syntax syntax, snmp_values_t *v) {
     char *end;
 
     switch (syntax) {
@@ -1281,188 +1256,189 @@ int snmp_value_parse(const char *str, enum snmp_syntax syntax, snmp_values_t *v)
             return (-1);
         return (0);
 
-    case SNMP_SYNTAX_OCTETSTRING:
-        {
-            u_long len;	/* actual length of string */
-            u_long alloc;	/* allocate length of string */
-            u_char *octs;	/* actual octets */
-            u_long oct;	/* actual octet */
-            u_char *nocts;	/* to avoid memory leak */
-            u_char c;	/* actual character */
+    case SNMP_SYNTAX_OCTETSTRING: {
+        u_long len;	/* actual length of string */
+        u_long alloc;	/* allocate length of string */
+        u_char *octs;	/* actual octets */
+        u_long oct;	/* actual octet */
+        u_char *nocts;	/* to avoid memory leak */
+        u_char c;	/* actual character */
 
 # define STUFFC(C)							                \
-    if (alloc == len) {					                    \
-    alloc += 100;					                        \
-    if ((nocts = (u_char*)realloc(octs, alloc)) == NULL) {	\
-    free(octs);				                                \
-    return (-1);			                              	\
-    }						                                \
-    octs = nocts;					                        \
-    }							                            \
-    octs[len++] = (C);
+if (alloc == len) {					                    \
+alloc += 100;					                        \
+if ((nocts = (u_char*)realloc(octs, alloc)) == NULL) {	\
+free(octs);				                                \
+return (-1);			                              	\
+}						                                \
+octs = nocts;					                        \
+}							                            \
+octs[len++] = (C);
 
-            len = alloc = 0;
-            octs = NULL;
+        len = alloc = 0;
+        octs = NULL;
 
-            if (*str == '"') {
-                str++;
-                while((c = *str++) != '\0') {
-                    if (c == '"') {
-                        if (*str != '\0') {
-                            free(octs);
-                            return (-1);
-                        }
+        if (*str == '"') {
+            str++;
+            while((c = *str++) != '\0') {
+                if (c == '"') {
+                    if (*str != '\0') {
+                        free(octs);
+                        return (-1);
+                    }
+                    break;
+                }
+                if (c == '\\') {
+                    switch (c = *str++) {
+
+                    case '\\':
+                        break;
+                    case 'a':
+                        c = '\a';
+                        break;
+                    case 'b':
+                        c = '\b';
+                        break;
+                    case 'f':
+                        c = '\f';
+                        break;
+                    case 'n':
+                        c = '\n';
+                        break;
+                    case 'r':
+                        c = '\r';
+                        break;
+                    case 't':
+                        c = '\t';
+                        break;
+                    case 'v':
+                        c = '\v';
+                        break;
+                    case 'x':
+                        c = 0;
+                        if (!isxdigit(*str))
+                            break;
+                        if (isdigit(*str))
+                            c = *str++ - '0';
+                        else if (isupper(*str))
+                            c = *str++ - 'A' + 10;
+                        else
+                            c = *str++ - 'a' + 10;
+                        if (!isxdigit(*str))
+                            break;
+                        if (isdigit(*str))
+                            c += *str++ - '0';
+                        else if (isupper(*str))
+                            c += *str++ - 'A' + 10;
+                        else
+                            c += *str++ - 'a' + 10;
+                        break;
+                    case '0':
+                    case '1':
+                    case '2':
+                    case '3':
+                    case '4':
+                    case '5':
+                    case '6':
+                    case '7':
+                        c = *str++ - '0';
+                        if (*str < '0' || *str > '7')
+                            break;
+                        c = *str++ - '0';
+                        if (*str < '0' || *str > '7')
+                            break;
+                        c = *str++ - '0';
+                        break;
+                    default:
                         break;
                     }
-                    if (c == '\\') {
-                        switch (c = *str++) {
-
-                        case '\\':
-                            break;
-                        case 'a':
-                            c = '\a';
-                            break;
-                        case 'b':
-                            c = '\b';
-                            break;
-                        case 'f':
-                            c = '\f';
-                            break;
-                        case 'n':
-                            c = '\n';
-                            break;
-                        case 'r':
-                            c = '\r';
-                            break;
-                        case 't':
-                            c = '\t';
-                            break;
-                        case 'v':
-                            c = '\v';
-                            break;
-                        case 'x':
-                            c = 0;
-                            if (!isxdigit(*str))
-                                break;
-                            if (isdigit(*str))
-                                c = *str++ - '0';
-                            else if (isupper(*str))
-                                c = *str++ - 'A' + 10;
-                            else
-                                c = *str++ - 'a' + 10;
-                            if (!isxdigit(*str))
-                                break;
-                            if (isdigit(*str))
-                                c += *str++ - '0';
-                            else if (isupper(*str))
-                                c += *str++ - 'A' + 10;
-                            else
-                                c += *str++ - 'a' + 10;
-                            break;
-                        case '0': case '1': case '2':
-                        case '3': case '4': case '5':
-                        case '6': case '7':
-                            c = *str++ - '0';
-                            if (*str < '0' || *str > '7')
-                                break;
-                            c = *str++ - '0';
-                            if (*str < '0' || *str > '7')
-                                break;
-                            c = *str++ - '0';
-                            break;
-                        default:
-                            break;
-                        }
-                    }
-                    STUFFC(c);
                 }
-            } else {
-                while (*str != '\0') {
-                    oct = strtoul(str, &end, 16);
-                    str = end;
-                    if (oct > 0xff) {
-                        free(octs);
-                        return (-1);
-                    }
-                    STUFFC(oct);
-                    if (*str == ':')
-                        str++;
-                    else if(*str != '\0') {
-                        free(octs);
-                        return (-1);
-                    }
-                }
+                STUFFC(c);
             }
-            v->octetstring.octets = octs;
-            v->octetstring.len = len;
-            return (0);
-# undef STUFFC
-        }
-
-    case SNMP_SYNTAX_OID:
-        {
-            u_long subid;
-
-            v->oid.len = 0;
-
-            for (;;) {
-                if (v->oid.len == ASN_MAXOIDLEN)
-                    return (-1);
-                subid = strtoul(str, &end, 10);
+        } else {
+            while (*str != '\0') {
+                oct = strtoul(str, &end, 16);
                 str = end;
-                if (subid > ASN_MAXID)
+                if (oct > 0xff) {
+                    free(octs);
                     return (-1);
-                v->oid.subs[v->oid.len++] = (asn_subid_t)subid;
-                if (*str == '\0')
-                    break;
-                if (*str != '.')
+                }
+                STUFFC(oct);
+                if (*str == ':')
+                    str++;
+                else if(*str != '\0') {
+                    free(octs);
                     return (-1);
-                str++;
+                }
             }
-            return (0);
         }
+        v->octetstring.octets = octs;
+        v->octetstring.len = len;
+        return (0);
+# undef STUFFC
+    }
 
-    case SNMP_SYNTAX_IPADDRESS:
-        {
-            struct hostent *he;
-            u_long ip[4];
-            int n;
+    case SNMP_SYNTAX_OID: {
+        u_long subid;
 
-            if (sscanf(str, "%lu.%lu.%lu.%lu%n", &ip[0], &ip[1], &ip[2],
-                &ip[3], &n) == 4 && (size_t)n == strlen(str) &&
+        v->oid.len = 0;
+
+        for (;;) {
+            if (v->oid.len == ASN_MAXOIDLEN)
+                return (-1);
+            subid = strtoul(str, &end, 10);
+            str = end;
+            if (subid > ASN_MAXID)
+                return (-1);
+            v->oid.subs[v->oid.len++] = (asn_subid_t)subid;
+            if (*str == '\0')
+                break;
+            if (*str != '.')
+                return (-1);
+            str++;
+        }
+        return (0);
+    }
+
+    case SNMP_SYNTAX_IPADDRESS: {
+        struct hostent *he;
+        u_long ip[4];
+        int n;
+
+        if (sscanf(str, "%lu.%lu.%lu.%lu%n", &ip[0], &ip[1], &ip[2],
+                   &ip[3], &n) == 4 && (size_t)n == strlen(str) &&
                 ip[0] <= 0xff && ip[1] <= 0xff &&
                 ip[2] <= 0xff && ip[3] <= 0xff) {
-                    v->ipaddress[0] = (u_char)ip[0];
-                    v->ipaddress[1] = (u_char)ip[1];
-                    v->ipaddress[2] = (u_char)ip[2];
-                    v->ipaddress[3] = (u_char)ip[3];
-                    return (0);
-            }
-
-            if ((he = gethostbyname(str)) == NULL)
-                return (-1);
-            if (he->h_addrtype != AF_INET)
-                return (-1);
-
-            v->ipaddress[0] = he->h_addr[0];
-            v->ipaddress[1] = he->h_addr[1];
-            v->ipaddress[2] = he->h_addr[2];
-            v->ipaddress[3] = he->h_addr[3];
+            v->ipaddress[0] = (u_char)ip[0];
+            v->ipaddress[1] = (u_char)ip[1];
+            v->ipaddress[2] = (u_char)ip[2];
+            v->ipaddress[3] = (u_char)ip[3];
             return (0);
         }
+
+        if ((he = gethostbyname(str)) == NULL)
+            return (-1);
+        if (he->h_addrtype != AF_INET)
+            return (-1);
+
+        v->ipaddress[0] = he->h_addr[0];
+        v->ipaddress[1] = he->h_addr[1];
+        v->ipaddress[2] = he->h_addr[2];
+        v->ipaddress[3] = he->h_addr[3];
+        return (0);
+    }
 
     case SNMP_SYNTAX_COUNTER:
     case SNMP_SYNTAX_GAUGE:
-    case SNMP_SYNTAX_TIMETICKS:
-        {
-            uint64_t sub;
+    case SNMP_SYNTAX_TIMETICKS: {
+        uint64_t sub;
 
-            sub = strtoull(str, &end, 0);
-            if (*end != '\0' || sub > 0xffffffff)
-                return (-1);
-            v->uint32 = (uint32_t)sub;
-            return (0);
-        }
+        sub = strtoull(str, &end, 0);
+        if (*end != '\0' || sub > 0xffffffff)
+            return (-1);
+        v->uint32 = (uint32_t)sub;
+        return (0);
+    }
 
     case SNMP_SYNTAX_COUNTER64:
         v->counter64 = strtoull(str, &end, 0);
@@ -1474,8 +1450,7 @@ int snmp_value_parse(const char *str, enum snmp_syntax syntax, snmp_values_t *v)
     return -1;
 }
 
-static void snmp_error_func(const char *fmt, ...)
-{
+static void snmp_error_func(const char *fmt, ...) {
     va_list ap;
 
     va_start(ap, fmt);
@@ -1485,8 +1460,7 @@ static void snmp_error_func(const char *fmt, ...)
     va_end(ap);
 }
 
-static void snmp_printf_func(const char *fmt, ...)
-{
+static void snmp_printf_func(const char *fmt, ...) {
     va_list ap;
 
     va_start(ap, fmt);
@@ -1495,8 +1469,8 @@ static void snmp_printf_func(const char *fmt, ...)
 }
 
 static enum snmp_code snmp_parse_bad_oid(const asn_oid_t* oid) {
-	static asn_subid_t      badOid[] =
-        { 1, 3, 6, 1, 6, 3, 15, 1, 1};
+    static asn_subid_t      badOid[] =
+    { 1, 3, 6, 1, 6, 3, 15, 1, 1};
 
 //	static asn_subid_t      unknownSecurityLevel[] =
 //        { 1, 3, 6, 1, 6, 3, 15, 1, 1, 1, 0 };
@@ -1506,29 +1480,29 @@ static enum snmp_code snmp_parse_bad_oid(const asn_oid_t* oid) {
 //        { 1, 3, 6, 1, 6, 3, 15, 1, 1, 3, 0 };
 //  static asn_subid_t      unknownEngineID[] =
 //        { 1, 3, 6, 1, 6, 3, 15, 1, 1, 4, 0 };
-//  static asn_subid_t      wrongDigest[] = 
+//  static asn_subid_t      wrongDigest[] =
 //	    { 1, 3, 6, 1, 6, 3, 15, 1, 1, 5, 0 };
 //  static asn_subid_t      decryptionError[] =
 //        { 1, 3, 6, 1, 6, 3, 15, 1, 1, 6, 0 };
 
-	if(11 == oid->len && 0 == memcmp(badOid, oid->subs, sizeof(asn_subid_t) * 9)) {
-		switch(oid->subs[0]) {
-		case 1:
-			return SNMP_CODE_BADSECLEVEL;
-		case 2:
-			return SNMP_CODE_NOTINTIME;
-		case 3:
-			return SNMP_CODE_BADUSER;
-		case 4:
-			return SNMP_CODE_BADENGINE;
-		case 5:
-			return SNMP_CODE_BADDIGEST;
-		case 6:
-			return SNMP_CODE_EDECRYPT;
-		}
-	}
+    if(11 == oid->len && 0 == memcmp(badOid, oid->subs, sizeof(asn_subid_t) * 9)) {
+        switch(oid->subs[0]) {
+        case 1:
+            return SNMP_CODE_BADSECLEVEL;
+        case 2:
+            return SNMP_CODE_NOTINTIME;
+        case 3:
+            return SNMP_CODE_BADUSER;
+        case 4:
+            return SNMP_CODE_BADENGINE;
+        case 5:
+            return SNMP_CODE_BADDIGEST;
+        case 6:
+            return SNMP_CODE_EDECRYPT;
+        }
+    }
 
-	return SNMP_CODE_BADOID;
+    return SNMP_CODE_BADOID;
 }
 
 
@@ -1538,13 +1512,12 @@ static enum snmp_code snmp_parse_bad_oid(const asn_oid_t* oid) {
 * syntaxes must be the same in response and request - the OIDs must be the
 * same in response and request
 */
-static enum snmp_code snmp_check_set_resp(const snmp_pdu_t * req, const snmp_pdu_t * resp)
-{
+static enum snmp_code snmp_check_set_resp(const snmp_pdu_t * req, const snmp_pdu_t * resp) {
     uint32_t i;
     for (i = 0; i < req->nbindings; i++) {
         if (asn_compare_oid(&req->bindings[i].var,
-            &resp->bindings[i].var) != 0) {
-			return snmp_parse_bad_oid(&resp->bindings[i].var);
+                            &resp->bindings[i].var) != 0) {
+            return snmp_parse_bad_oid(&resp->bindings[i].var);
         }
         if (resp->bindings[i].syntax != req->bindings[i].syntax) {
             return (SNMP_CODE_SYNTAX_MISMATCH);
@@ -1559,34 +1532,32 @@ static enum snmp_code snmp_check_set_resp(const snmp_pdu_t * req, const snmp_pdu
 * This is a (almost) complete copy of snmp_pdu_check() - with matching syntaxes
 * checks and some other checks skiped.
 */
-static enum snmp_code snmp_check_get_resp(const snmp_pdu_t *resp, const snmp_pdu_t *req)
-{
+static enum snmp_code snmp_check_get_resp(const snmp_pdu_t *resp, const snmp_pdu_t *req) {
     uint32_t i;
 
     for (i = 0; i < req->nbindings; i++) {
         if (asn_compare_oid(&req->bindings[i].var,
-            &resp->bindings[i].var) != 0) {
-			return snmp_parse_bad_oid(&resp->bindings[i].var);
+                            &resp->bindings[i].var) != 0) {
+            return snmp_parse_bad_oid(&resp->bindings[i].var);
         }
 
         if (resp->version != SNMP_V1) {
-			if (resp->bindings[i].syntax == SNMP_SYNTAX_NOSUCHOBJECT)
-				return (SNMP_CODE_SYNTAX_NOSUCHOBJECT);
-			if ( resp->bindings[i].syntax == SNMP_SYNTAX_NOSUCHINSTANCE)
-				return (SNMP_CODE_SYNTAX_NOSUCHINSTANCE);
-		}
+            if (resp->bindings[i].syntax == SNMP_SYNTAX_NOSUCHOBJECT)
+                return (SNMP_CODE_SYNTAX_NOSUCHOBJECT);
+            if ( resp->bindings[i].syntax == SNMP_SYNTAX_NOSUCHINSTANCE)
+                return (SNMP_CODE_SYNTAX_NOSUCHINSTANCE);
+        }
     }
-	
+
     return (SNMP_CODE_OK);
 }
 
-static enum snmp_code snmp_check_getbulk_resp(const snmp_pdu_t *resp, const snmp_pdu_t *req)
-{
+static enum snmp_code snmp_check_getbulk_resp(const snmp_pdu_t *resp, const snmp_pdu_t *req) {
     int32_t N, R, M, r;
-	\
+    \
     for (N = 0; N < req->error_status; N++) {
         if (asn_is_suboid(&req->bindings[N].var,
-            &resp->bindings[N].var) == 0)
+                          &resp->bindings[N].var) == 0)
             return (SNMP_CODE_BADRESULT);
         if (resp->bindings[N].syntax == SNMP_SYNTAX_ENDOFMIBVIEW)
             return (SNMP_CODE_SYNTAX_ENDOFMIBVIEW);
@@ -1594,26 +1565,25 @@ static enum snmp_code snmp_check_getbulk_resp(const snmp_pdu_t *resp, const snmp
 
     for (R = N , r = N; R  < (int32_t) req->nbindings; R++) {
         for (M = 0; M < req->error_index && (r + M) <
-            (int32_t) resp->nbindings; M++) {
-                if (asn_is_suboid(&req->bindings[R].var,
-                    &resp->bindings[r + M].var) == 0)
-					return (SNMP_CODE_BADOID);
+                (int32_t) resp->nbindings; M++) {
+            if (asn_is_suboid(&req->bindings[R].var,
+                              &resp->bindings[r + M].var) == 0)
+                return (SNMP_CODE_BADOID);
 
-                if (resp->bindings[r + M].syntax ==
+            if (resp->bindings[r + M].syntax ==
                     SNMP_SYNTAX_ENDOFMIBVIEW) {
-                        M++;
-                        break;
-                }
+                M++;
+                break;
+            }
         }
         r += M;
     }
-	
+
     return (SNMP_CODE_OK);
 }
 
 
-static enum snmp_code snmp_check_getnext_resp(const snmp_pdu_t *resp, const snmp_pdu_t *req)
-{
+static enum snmp_code snmp_check_getnext_resp(const snmp_pdu_t *resp, const snmp_pdu_t *req) {
     uint32_t i;
 
     for (i = 0; i < req->nbindings; i++) {
@@ -1621,27 +1591,26 @@ static enum snmp_code snmp_check_getnext_resp(const snmp_pdu_t *resp, const snmp
             return (SNMP_CODE_BADOID);
 
         if (resp->version != SNMP_V1 && resp->bindings[i].syntax ==
-            SNMP_SYNTAX_ENDOFMIBVIEW)
+                SNMP_SYNTAX_ENDOFMIBVIEW)
             return (SNMP_CODE_SYNTAX_ENDOFMIBVIEW);
     }
-	
+
     return (SNMP_CODE_OK);
 }
 
 /*
 * Should be called to check a responce to get/getnext/getbulk.
 */
-enum snmp_code snmp_pdu_check(const snmp_pdu_t *resp, const snmp_pdu_t *req)
-{
-	enum snmp_code ret = SNMP_CODE_OK;
+enum snmp_code snmp_pdu_check(const snmp_pdu_t *resp, const snmp_pdu_t *req) {
+    enum snmp_code ret = SNMP_CODE_OK;
 
     if (resp == NULL || req == NULL) {
-		snmp_error(snmp_get_error(SNMP_CODE_FAILED));
+        snmp_error(snmp_get_error(SNMP_CODE_FAILED));
         return (SNMP_CODE_FAILED);
-	}
+    }
 
     if (resp->version != req->version) {
-		snmp_error(snmp_get_error(SNMP_CODE_BADVERS));
+        snmp_error(snmp_get_error(SNMP_CODE_BADVERS));
         return (SNMP_CODE_BADVERS);
     }
 
@@ -1650,31 +1619,31 @@ enum snmp_code snmp_pdu_check(const snmp_pdu_t *resp, const snmp_pdu_t *req)
         return (enum snmp_code)(SNMP_CODE_ERR_NOERROR + resp->error_status);
     }
 
-    if (resp->nbindings != req->nbindings && req->pdu_type != SNMP_PDU_GETBULK){
-		snmp_error(snmp_get_error(SNMP_CODE_BADBINDINGNUMBER));
+    if (resp->nbindings != req->nbindings && req->pdu_type != SNMP_PDU_GETBULK) {
+        snmp_error(snmp_get_error(SNMP_CODE_BADBINDINGNUMBER));
         return (SNMP_CODE_BADBINDINGNUMBER);
     }
 
     switch (req->pdu_type) {
     case SNMP_PDU_GET:
         ret = (snmp_check_get_resp(resp,req));
-		break;
+        break;
     case SNMP_PDU_GETBULK:
         ret = (snmp_check_getbulk_resp(resp,req));
-		break;
+        break;
     case SNMP_PDU_GETNEXT:
         ret = (snmp_check_getnext_resp(resp,req));
-		break;
+        break;
     case SNMP_PDU_SET:
         ret = (snmp_check_set_resp(resp,req));
-		break;
+        break;
     default:
         /* NOTREACHED */
         break;
     }
-	if(SNMP_CODE_OK != ret) {
-		snmp_error(snmp_get_error(ret));
-	}
+    if(SNMP_CODE_OK != ret) {
+        snmp_error(snmp_get_error(ret));
+    }
 
     return (ret);
 }
