@@ -115,7 +115,7 @@ STAILQ_HEAD(snmp_idxlist, index);
 struct snmp_index_entry {
     char			*string;
     uint32_t		strlen;
-    asn_oid_t		var;
+    asn_oid_t		oid;
     struct snmp_idxlist	index_list;
     COMPAT_SLIST_ENTRY(snmp_index_entry)	link;
 };
@@ -127,7 +127,7 @@ struct snmp_oid2str {
     enum snmp_tc		tc;
     enum snmp_syntax	syntax;
     enum snmp_access	access;
-    asn_oid_t		var;
+    asn_oid_t		oid;
     /* A pointer to a entry from the table list - OK if NULL. */
     struct snmp_index_entry	*table_idx;
     /*

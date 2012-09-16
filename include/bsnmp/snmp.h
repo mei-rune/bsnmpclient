@@ -79,7 +79,7 @@ typedef union snmp_values {
 } snmp_values_t;
 
 typedef struct snmp_value {
-    asn_oid_t		var;
+	asn_oid_t       oid;
     enum snmp_syntax	syntax;
     snmp_values_t   v;
 } snmp_value_t;
@@ -320,6 +320,7 @@ enum snmp_code snmp_calc_keychange(snmp_user_t *, uint8_t *);
 
 extern void (*snmp_error)(const char *, ...);
 extern void (*snmp_printf)(const char *, ...);
+const char* snmp_get_error(enum snmp_code code);
 
 
 /* check wheater the answer is valid or not */

@@ -427,13 +427,13 @@ snmptools_parse_stroid(struct snmp_toolinfo *snmptoolctx,
 
     /* If OID given on command line append it. */
     if (in_oid.len > 0)
-        asn_append_oid(&(obj->val.var), &in_oid);
+        asn_append_oid(&(obj->val.oid), &in_oid);
     else if (*str == '[') {
         if ((str = snmp_parse_index(snmptoolctx, str + 1, obj)) == NULL)
             return (NULL);
     } else if (obj->val.syntax > 0 && GET_PDUTYPE(snmptoolctx) ==
                SNMP_PDU_GET) {
-        if (snmp_suboid_append(&(obj->val.var), (asn_subid_t) 0) < 0)
+        if (snmp_suboid_append(&(obj->val.oid), (asn_subid_t) 0) < 0)
             return (NULL);
     }
 
@@ -447,11 +447,11 @@ snmptools_parse_oid(struct snmp_toolinfo *snmptoolctx,
         return (-1);
 
     if (ISSET_NUMERIC(snmptoolctx)) {
-        if (snmp_parse_numoid(argv, &(obj->val.var)) < 0)
+        if (snmp_parse_numoid(argv, &(obj->val.oid)) < 0)
             return (-1);
     } else {
         if (snmptools_parse_stroid(snmptoolctx, obj, argv) == NULL &&
-                snmp_parse_numoid(argv, &(obj->val.var)) < 0)
+                snmp_parse_numoid(argv, &(obj->val.oid)) < 0)
             return (-1);
     }
 
@@ -463,7 +463,7 @@ snmptool_add_vbind(snmp_pdu_t *pdu, struct snmp_object *obj) {
     if (obj->error > 0)
         return (0);
 
-    asn_append_oid(&(pdu->bindings[pdu->nbindings].var), &(obj->val.var));
+    asn_append_oid(&(pdu->bindings[pdu->nbindings].oid), &(obj->val.oid));
     pdu->nbindings++;
 
     return (pdu->nbindings);
@@ -566,7 +566,7 @@ static const asn_oid_t snmp_mibII_OID = {
 static int32_t
 snmpwalk_add_default(struct snmp_toolinfo *snmptoolctx,
                      struct snmp_object *obj, char *string) {
-    asn_append_oid(&(obj->val.var), &snmp_mibII_OID);
+    asn_append_oid(&(obj->val.oid), &snmp_mibII_OID);
     return (1);
 }
 
@@ -576,7 +576,7 @@ snmpwalk_add_default(struct snmp_toolinfo *snmptoolctx,
 static void
 snmpwalk_nextpdu_create(struct snmp_client* client, uint32_t op, asn_oid_t *var, snmp_pdu_t *pdu) {
     snmp_pdu_create(client, pdu, op);
-    asn_append_oid(&(pdu->bindings[0].var), var);
+    asn_append_oid(&(pdu->bindings[0].oid), var);
     pdu->nbindings = 1;
 }
 
@@ -593,7 +593,7 @@ snmptool_walk(struct snmp_toolinfo *snmptoolctx) {
 
         /* Remember the root where the walk started from. */
         memset(&root, 0, sizeof(asn_oid_t));
-        asn_append_oid(&root, &(req.bindings[0].var));
+        asn_append_oid(&root, &(req.bindings[0].oid));
 
         outputs = 0;
         while (snmp_dialog(&snmptoolctx->client, &req, &resp) >= 0) {
@@ -614,7 +614,7 @@ snmptool_walk(struct snmp_toolinfo *snmptoolctx) {
                 break;
             }
 
-            if (!(asn_is_suboid(&root, &(resp.bindings[0].var)))) {
+            if (!(asn_is_suboid(&root, &(resp.bindings[0].oid)))) {
                 snmp_pdu_free(&resp);
                 break;
             }
@@ -628,7 +628,7 @@ snmptool_walk(struct snmp_toolinfo *snmptoolctx) {
             snmp_pdu_free(&resp);
 
             snmpwalk_nextpdu_create(&snmptoolctx->client, SNMP_PDU_GETNEXT,
-                                    &(resp.bindings[0].var), &req);
+                                    &(resp.bindings[0].oid), &req);
         }
 
         /* Just in case our root was a leaf. */
@@ -715,7 +715,7 @@ parse_oid_string(struct snmp_toolinfo *snmptoolctx,
         return (-1);
     }
 
-    asn_append_oid(&(value->v.oid), &(obj.val.var));
+    asn_append_oid(&(value->v.oid), &(obj.val.oid));
     return (1);
 }
 
@@ -938,7 +938,7 @@ parse_pair_numoid_val(char *str, snmp_value_t *snmp_val) {
      * Here try parsing the OIDs and syntaxes and then check values - have
      * to know syntax to check value boundaries.
      */
-    if (snmp_parse_numoid(oid_str, &(snmp_val->var)) < 0) {
+    if (snmp_parse_numoid(oid_str, &(snmp_val->oid)) < 0) {
         warnx("Error parsing OID %s",oid_str);
         return (-1);
     }
@@ -1166,7 +1166,7 @@ snmpset_add_vbind(snmp_pdu_t *pdu, struct snmp_object *obj) {
             < 0)
         return (-1);
 
-    asn_append_oid(&(pdu->bindings[pdu->nbindings].var), &(obj->val.var));
+    asn_append_oid(&(pdu->bindings[pdu->nbindings].oid), &(obj->val.oid));
     pdu->nbindings++;
 
     return (pdu->nbindings);

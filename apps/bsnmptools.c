@@ -706,9 +706,9 @@ snmp_oid2asn_oid(struct snmp_toolinfo *snmptoolctx, char *str,
     endptr = str + i;
     memset(&obj, 0, sizeof(struct snmp_object));
     if (i == 0) {
-        if ((endptr = snmp_parse_suboid(str, &(obj.val.var))) == NULL)
+        if ((endptr = snmp_parse_suboid(str, &(obj.val.oid))) == NULL)
             return (NULL);
-        if (snmp_suboid_append(oid, (asn_subid_t) obj.val.var.len) < 0)
+        if (snmp_suboid_append(oid, (asn_subid_t) obj.val.oid.len) < 0)
             return (NULL);
     } else {
         strlcpy(string, str, i + 1);
@@ -717,10 +717,9 @@ snmp_oid2asn_oid(struct snmp_toolinfo *snmptoolctx, char *str,
             warnx("Unknown string - %s",string);
             return (NULL);
         }
-        free(string);
     }
 
-    asn_append_oid(oid, &(obj.val.var));
+    asn_append_oid(oid, &(obj.val.oid));
     return (endptr);
 }
 
@@ -849,22 +848,22 @@ snmp_parse_subindex(struct snmp_toolinfo *snmptoolctx, char *str,
 
     switch (stx) {
     case SNMP_SYNTAX_INTEGER:
-        return (snmp_int2asn_oid(ptr, &(object->val.var)));
+        return (snmp_int2asn_oid(ptr, &(object->val.oid)));
     case SNMP_SYNTAX_OID:
         return (snmp_oid2asn_oid(snmptoolctx, ptr,
-                                 &(object->val.var)));
+                                 &(object->val.oid)));
     case SNMP_SYNTAX_IPADDRESS:
-        return (snmp_ip2asn_oid(ptr, &(object->val.var)));
+        return (snmp_ip2asn_oid(ptr, &(object->val.oid)));
     case SNMP_SYNTAX_COUNTER:
         /* FALLTHROUGH */
     case SNMP_SYNTAX_GAUGE:
         /* FALLTHROUGH */
     case SNMP_SYNTAX_TIMETICKS:
-        return (snmp_uint2asn_oid(ptr, &(object->val.var)));
+        return (snmp_uint2asn_oid(ptr, &(object->val.oid)));
     case SNMP_SYNTAX_COUNTER64:
-        return (snmp_cnt64_2asn_oid(ptr, &(object->val.var)));
+        return (snmp_cnt64_2asn_oid(ptr, &(object->val.oid)));
     case SNMP_SYNTAX_OCTETSTRING:
-        return (snmp_tc2oid(idx->tc, ptr, &(object->val.var)));
+        return (snmp_tc2oid(idx->tc, ptr, &(object->val.oid)));
     default:
         /* NOTREACHED */
         break;
@@ -1021,7 +1020,7 @@ snmp_object_remove(struct snmp_toolinfo *snmptoolctx, asn_oid_t *oid) {
 
 
     SLIST_FOREACH(temp, &snmptoolctx->snmp_objectlist, link)
-    if (asn_compare_oid(&(temp->val.var), oid) == 0)
+    if (asn_compare_oid(&(temp->val.oid), oid) == 0)
         break;
 
     if (temp == NULL) {
@@ -1129,7 +1128,7 @@ snmp_object_seterror(struct snmp_toolinfo *snmptoolctx,
         return (-1);
 
     SLIST_FOREACH(obj, &snmptoolctx->snmp_objectlist, link)
-    if (asn_compare_oid(&(err_value->var), &(obj->val.var)) == 0) {
+    if (asn_compare_oid(&(err_value->oid), &(obj->val.oid)) == 0) {
         obj->error = error_status;
         return (1);
     }
@@ -1138,7 +1137,7 @@ snmp_object_seterror(struct snmp_toolinfo *snmptoolctx,
 }
 
 static void snmp_output_octetstring(struct snmp_toolinfo *snmptoolctx, enum snmp_tc tc,
-                                    uint32_t len, char *octets) {
+                                    uint32_t len, u_char *octets) {
     char *buf;
 
     if (len == 0 || octets == NULL)
@@ -1181,7 +1180,7 @@ static void snmp_output_oid_value(struct snmp_toolinfo *snmptoolctx, asn_oid_t *
 
     if(!ISSET_NUMERIC(snmptoolctx)) {
         memset(&obj, 0, sizeof(struct snmp_object));
-        asn_append_oid(&(obj.val.var), oid);
+        asn_append_oid(&(obj.val.oid), oid);
 
         if (snmp_lookup_enumstring(snmptoolctx, &obj) > 0)
             fprintf(stdout, "%s" , obj.info->string);
@@ -1250,7 +1249,7 @@ static void snmp_output_counter64(struct snmp_toolinfo *snmptoolctx, uint64_t co
         fprintf(stdout, "%s : ",
                 syntax_strings[SNMP_SYNTAX_COUNTER64].str);
 
-    fprintf(stdout,"%ju", counter64);
+    fprintf(stdout,"%ull", counter64);
 }
 
 int32_t snmp_output_numval(struct snmp_toolinfo *snmptoolctx, snmp_value_t *val,
@@ -1339,11 +1338,11 @@ static int32_t snmp_fill_object(struct snmp_toolinfo *snmptoolctx, struct snmp_o
     if (obj == NULL || val == NULL)
         return (-1);
 
-    if ((suboid = snmp_suboid_pop(&(val->var))) > ASN_MAXID)
+    if ((suboid = snmp_suboid_pop(&(val->oid))) > ASN_MAXID)
         return (-1);
 
     memset(obj, 0, sizeof(struct snmp_object));
-    asn_append_oid(&(obj->val.var), &(val->var));
+    asn_append_oid(&(obj->val.oid), &(val->oid));
     obj->val.syntax = val->syntax;
 
     if (obj->val.syntax > 0)
@@ -1351,8 +1350,8 @@ static int32_t snmp_fill_object(struct snmp_toolinfo *snmptoolctx, struct snmp_o
     else
         rc = snmp_lookup_nonleaf_string(snmptoolctx, obj);
 
-    (void) snmp_suboid_append(&(val->var), suboid);
-    (void) snmp_suboid_append(&(obj->val.var), suboid);
+    (void) snmp_suboid_append(&(val->oid), suboid);
+    (void) snmp_suboid_append(&(obj->val.oid), suboid);
 
     return (rc);
 }
@@ -1441,7 +1440,7 @@ static int32_t snmp_output_object(struct snmp_toolinfo *snmptoolctx, struct snmp
 
     if (o->info->table_idx == NULL) {
         fprintf(stdout,"%s.%d", o->info->string,
-                o->val.var.subs[o->val.var.len - 1]);
+                o->val.oid.subs[o->val.oid.len - 1]);
         return (1);
     }
 
@@ -1449,8 +1448,8 @@ static int32_t snmp_output_object(struct snmp_toolinfo *snmptoolctx, struct snmp
     memset(&oid, 0, sizeof(asn_oid_t));
 
     len = 1;
-    asn_slice_oid(&oid, &(o->val.var), (o->info->table_idx->var.len + len),
-                  o->val.var.len);
+    asn_slice_oid(&oid, &(o->val.oid), (o->info->table_idx->oid.len + len),
+                  o->val.oid.len);
 
     first = 1;
     STAILQ_FOREACH(temp, &(OBJECT_IDX_LIST(o)), link) {
@@ -1462,8 +1461,8 @@ static int32_t snmp_output_object(struct snmp_toolinfo *snmptoolctx, struct snmp
             break;
         len += i;
         memset(&oid, 0, sizeof(asn_oid_t));
-        asn_slice_oid(&oid, &(o->val.var),
-                      (o->info->table_idx->var.len + len), o->val.var.len + 1);
+        asn_slice_oid(&oid, &(o->val.oid),
+                      (o->info->table_idx->oid.len + len), o->val.oid.len + 1);
     }
 
     fprintf(stdout,"]");
@@ -1487,7 +1486,7 @@ void snmp_output_err_resp(struct snmp_toolinfo *snmptoolctx, snmp_pdu_t *pdu) {
                                             &(pdu->bindings[pdu->error_index - 1])) > 0))
             snmp_output_object(snmptoolctx, &object);
         else {
-            asn_oid2str_r(&(pdu->bindings[pdu->error_index - 1].var), buf);
+            asn_oid2str_r(&(pdu->bindings[pdu->error_index - 1].oid), buf);
             fprintf(stdout,"%s", buf);
         }
     }
@@ -1513,7 +1512,7 @@ int32_t snmp_output_resp(struct snmp_toolinfo *snmptoolctx, snmp_pdu_t *pdu) {
                                       &(pdu->bindings[i])) > 0))
                 snmp_output_object(snmptoolctx, &object);
             else {
-                asn_oid2str_r(&(pdu->bindings[i].var), p);
+                asn_oid2str_r(&(pdu->bindings[i].oid), p);
                 fprintf(stdout, "%s", p);
             }
         }

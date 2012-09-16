@@ -46,7 +46,7 @@
 #include "bsnmptools.h"
 
 extern int _bsnmptools_debug;
-#define	DEBUG	if (_bsnmptools_debug) fprintf
+#define	DEBUG_PRINTF	if (_bsnmptools_debug) fprintf
 
 #ifndef HAVE_STRLCPY
 
@@ -213,11 +213,11 @@ snmp_dump_oid2str(struct snmp_oid2str *entry) {
 
     if (entry != NULL) {
         memset(buf, 0, sizeof(buf));
-        asn_oid2str_r(&(entry->var), buf);
-        DEBUG(stderr, "%s - %s - %d - %d - %d", buf, entry->string,
+        asn_oid2str_r(&(entry->oid), buf);
+        DEBUG_PRINTF(stderr, "%s - %s - %d - %d - %d", buf, entry->string,
               entry->syntax, entry->access, entry->strlen);
         snmp_dump_enumpairs(entry->snmp_enum);
-        DEBUG(stderr,"%s \n", (entry->table_idx == NULL)?"No table":
+        DEBUG_PRINTF(stderr,"%s \n", (entry->table_idx == NULL)?"No table":
               entry->table_idx->string);
     }
 }
@@ -291,14 +291,14 @@ snmp_mapping_insert(struct snmp_mapping *headp, struct snmp_oid2str *entry) {
         return(-1);
 
     if ((prev = SLIST_FIRST(headp)) == NULL ||
-            asn_compare_oid(&(entry->var), &(prev->var)) < 0) {
+            asn_compare_oid(&(entry->oid), &(prev->oid)) < 0) {
         SLIST_INSERT_HEAD(headp, entry, link);
         return (1);
     } else
         rc = -1;	/* Make the compiler happy. */
 
     SLIST_FOREACH(temp, headp, link) {
-        if ((rc = asn_compare_oid(&(entry->var), &(temp->var))) <= 0)
+        if ((rc = asn_compare_oid(&(entry->oid), &(temp->oid))) <= 0)
             break;
         prev = temp;
         rc = -1;
@@ -481,14 +481,14 @@ snmp_table_insert(struct snmp_toolinfo *snmptoolctx,
         return(-1);
 
     if ((prev = SLIST_FIRST(&snmptoolctx->snmp_tablelist)) == NULL ||
-            asn_compare_oid(&(entry->var), &(prev->var)) < 0) {
+            asn_compare_oid(&(entry->oid), &(prev->oid)) < 0) {
         SLIST_INSERT_HEAD(&snmptoolctx->snmp_tablelist, entry, link);
         return (1);
     } else
         rc = -1;	/* Make the compiler happy. */
 
     SLIST_FOREACH(temp, &snmptoolctx->snmp_tablelist, link) {
-        if ((rc = asn_compare_oid(&(entry->var), &(temp->var))) <= 0)
+        if ((rc = asn_compare_oid(&(entry->oid), &(temp->oid))) <= 0)
             break;
         prev = temp;
         rc = -1;
@@ -577,7 +577,7 @@ snmp_mapping_dumplist(struct snmp_mapping *headp) {
 
     SLIST_FOREACH(entry,headp,link) {
         memset(buf, 0, sizeof(buf));
-        asn_oid2str_r(&(entry->var), buf);
+        asn_oid2str_r(&(entry->oid), buf);
         fprintf(stderr, "%s - %s - %d - %d - %d", buf, entry->string,
                 entry->syntax, entry->access ,entry->strlen);
         fprintf(stderr," - %s \n", (entry->table_idx == NULL)?
@@ -595,7 +595,7 @@ snmp_mapping_dumptable(struct snmp_table_index *headp) {
 
     SLIST_FOREACH(entry, headp, link) {
         memset(buf, 0, sizeof(buf));
-        asn_oid2str_r(&(entry->var), buf);
+        asn_oid2str_r(&(entry->oid), buf);
         fprintf(stderr,"%s - %s - %d - ", buf, entry->string,
                 entry->strlen);
         snmp_dump_indexlist(&(entry->index_list));
@@ -688,7 +688,7 @@ snmp_lookuplist_string(struct snmp_mapping *headp, struct snmp_object *s) {
         return (-1);
 
     SLIST_FOREACH(temp, headp, link)
-    if (asn_compare_oid(&(temp->var), &(s->val.var)) == 0)
+    if (asn_compare_oid(&(temp->oid), &(s->val.oid)) == 0)
         break;
 
     if ((s->info = temp) == NULL)
@@ -706,8 +706,8 @@ snmp_lookup_leaf(struct snmp_mapping *headp, struct snmp_object *s) {
         return (-1);
 
     SLIST_FOREACH(temp,headp,link) {
-        if ((asn_compare_oid(&(temp->var), &(s->val.var)) == 0) ||
-                (asn_is_suboid(&(temp->var), &(s->val.var)))) {
+        if ((asn_compare_oid(&(temp->oid), &(s->val.oid)) == 0) ||
+                (asn_is_suboid(&(temp->oid), &(s->val.oid)))) {
             s->info = temp;
             return (1);
         }
@@ -838,7 +838,7 @@ snmp_lookup_oidlist(struct snmp_mapping *hp, struct snmp_object *s, char *oid) {
 
         s->val.syntax = temp->syntax;
         s->info = temp;
-        asn_append_oid(&(s->val.var), &(temp->var));
+        asn_append_oid(&(s->val.oid), &(temp->oid));
         return (1);
     }
 
@@ -866,7 +866,7 @@ snmp_lookup_tablelist(struct snmp_toolinfo *snmptoolctx,
          * That should not change the reponce we'll get.
          */
         s->val.syntax = SNMP_SYNTAX_NULL;
-        asn_append_oid(&(s->val.var), &(temp->var));
+        asn_append_oid(&(s->val.oid), &(temp->oid));
         if (snmp_lookup_leaf(&snmptoolctx->snmp_nodelist, s) > 0)
             return (1);
         else

@@ -181,7 +181,7 @@ snmp_get_tc(char *str) {
 }
 
 char *
-snmp_oct2tc(enum snmp_tc tc, uint32_t len, char *octets) {
+snmp_oct2tc(enum snmp_tc tc, uint32_t len, u_char *octets) {
     uint32_t tc_len;
     char * buf;
 

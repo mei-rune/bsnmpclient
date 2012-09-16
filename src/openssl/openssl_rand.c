@@ -56,7 +56,7 @@
 * [including the GNU Public Licence.]
 */
 
-#include <process.h>
+//#include <process.h>
 
 #include "compat/openssl_evp.h"
 

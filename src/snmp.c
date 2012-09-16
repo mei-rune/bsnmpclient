@@ -145,7 +145,7 @@ static enum asn_err get_var_binding(asn_buf_t *b, snmp_value_t *binding) {
     trailer = b->asn_len - len;
     b->asn_len = len;
 
-    if (asn_get_objid(b, &binding->var) != ASN_ERR_OK) {
+    if (asn_get_objid(b, &binding->oid) != ASN_ERR_OK) {
         snmp_error("cannot parse binding objid");
         return (ASN_ERR_FAILED);
     }
@@ -948,7 +948,7 @@ enum asn_err snmp_binding_encode(asn_buf_t *b, const snmp_value_t *binding) {
         return (err);
     }
 
-    if ((err = asn_put_objid(b, &binding->var)) != ASN_ERR_OK) {
+    if ((err = asn_put_objid(b, &binding->oid)) != ASN_ERR_OK) {
         *b = save;
         return (err);
     }
@@ -1040,7 +1040,7 @@ static void dump_binding(const snmp_value_t *b) {
     u_int i;
     char buf[ASN_OIDSTRLEN];
 
-    snmp_printf("%s=", asn_oid2str_r(&b->var, buf));
+    snmp_printf("%s=", asn_oid2str_r(&b->oid, buf));
     switch (b->syntax) {
 
     case SNMP_SYNTAX_NULL:
@@ -1181,8 +1181,9 @@ void snmp_value_free(snmp_value_t *value) {
     value->syntax = SNMP_SYNTAX_NULL;
 }
 
-int snmp_value_copy(snmp_value_t *to, const snmp_value_t *from) {
-    to->var = from->var;
+int snmp_value_copy(snmp_value_t *to, const snmp_value_t *from)
+{
+    to->oid = from->oid;
     to->syntax = from->syntax;
 
     if (from->syntax == SNMP_SYNTAX_OCTETSTRING) {
@@ -1515,9 +1516,9 @@ static enum snmp_code snmp_parse_bad_oid(const asn_oid_t* oid) {
 static enum snmp_code snmp_check_set_resp(const snmp_pdu_t * req, const snmp_pdu_t * resp) {
     uint32_t i;
     for (i = 0; i < req->nbindings; i++) {
-        if (asn_compare_oid(&req->bindings[i].var,
-                            &resp->bindings[i].var) != 0) {
-            return snmp_parse_bad_oid(&resp->bindings[i].var);
+        if (asn_compare_oid(&req->bindings[i].oid,
+            &resp->bindings[i].oid) != 0) {
+			return snmp_parse_bad_oid(&resp->bindings[i].oid);
         }
         if (resp->bindings[i].syntax != req->bindings[i].syntax) {
             return (SNMP_CODE_SYNTAX_MISMATCH);
@@ -1536,9 +1537,9 @@ static enum snmp_code snmp_check_get_resp(const snmp_pdu_t *resp, const snmp_pdu
     uint32_t i;
 
     for (i = 0; i < req->nbindings; i++) {
-        if (asn_compare_oid(&req->bindings[i].var,
-                            &resp->bindings[i].var) != 0) {
-            return snmp_parse_bad_oid(&resp->bindings[i].var);
+        if (asn_compare_oid(&req->bindings[i].oid,
+            &resp->bindings[i].oid) != 0) {
+			return snmp_parse_bad_oid(&resp->bindings[i].oid);
         }
 
         if (resp->version != SNMP_V1) {
@@ -1556,8 +1557,8 @@ static enum snmp_code snmp_check_getbulk_resp(const snmp_pdu_t *resp, const snmp
     int32_t N, R, M, r;
     \
     for (N = 0; N < req->error_status; N++) {
-        if (asn_is_suboid(&req->bindings[N].var,
-                          &resp->bindings[N].var) == 0)
+        if (asn_is_suboid(&req->bindings[N].oid,
+            &resp->bindings[N].oid) == 0)
             return (SNMP_CODE_BADRESULT);
         if (resp->bindings[N].syntax == SNMP_SYNTAX_ENDOFMIBVIEW)
             return (SNMP_CODE_SYNTAX_ENDOFMIBVIEW);
@@ -1566,8 +1567,8 @@ static enum snmp_code snmp_check_getbulk_resp(const snmp_pdu_t *resp, const snmp
     for (R = N , r = N; R  < (int32_t) req->nbindings; R++) {
         for (M = 0; M < req->error_index && (r + M) <
                 (int32_t) resp->nbindings; M++) {
-            if (asn_is_suboid(&req->bindings[R].var,
-                              &resp->bindings[r + M].var) == 0)
+                if (asn_is_suboid(&req->bindings[R].oid,
+                    &resp->bindings[r + M].oid) == 0)
                 return (SNMP_CODE_BADOID);
 
             if (resp->bindings[r + M].syntax ==
@@ -1587,7 +1588,7 @@ static enum snmp_code snmp_check_getnext_resp(const snmp_pdu_t *resp, const snmp
     uint32_t i;
 
     for (i = 0; i < req->nbindings; i++) {
-        if (asn_is_suboid(&req->bindings[i].var, &resp->bindings[i].var) == 0)
+        if (asn_is_suboid(&req->bindings[i].oid, &resp->bindings[i].oid) == 0)
             return (SNMP_CODE_BADOID);
 
         if (resp->version != SNMP_V1 && resp->bindings[i].syntax ==

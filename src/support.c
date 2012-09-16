@@ -37,6 +37,9 @@
 #include <errno.h>
 #include <string.h>
 #include <sys/timeb.h>
+#ifndef _WIN32
+ #include <fcntl.h>
+#endif
 
 #include "support.h"
 
@@ -113,6 +116,7 @@ int gettimeofday(struct timeval *tv, struct timezone *tz) {
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <sys/un.h>
 #include <netdb.h>
 
 extern int h_nerr;
@@ -152,7 +156,9 @@ getaddrinfo(const char *host, const char *port, const struct addrinfo *hints,
     (*res)->ai_addrlen = sizeof(struct sockaddr_in);
     s = (struct sockaddr_in *)(*res)->ai_addr;
     s->sin_family = hints->ai_family;
+#ifndef SUN_LEN
     s->sin_len = sizeof(*s);
+#endif
     memcpy(&s->sin_addr, hent->h_addr, 4);
 
     if ((sent = getservbyname(port, NULL)) == NULL) {

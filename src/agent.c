@@ -122,7 +122,7 @@ find_node(const snmp_value_t *value, enum snmp_syntax *errp) {
 
     if (TR(FIND))
         snmp_debug("find: searching %s",
-                   asn_oid2str_r(&value->var, oidbuf));
+                   asn_oid2str_r(&value->oid, oidbuf));
 
     /*
      * If we have an exact match (the entry in the table is a
@@ -130,9 +130,9 @@ find_node(const snmp_value_t *value, enum snmp_syntax *errp) {
      * If the table oid is higher than the variable, there is no match.
      */
     for (tp = tree; tp < tree + tree_size; tp++) {
-        if (asn_is_suboid(&tp->oid, &value->var))
+        if (asn_is_suboid(&tp->oid, &value->oid))
             goto found;
-        if (asn_compare_oid(&tp->oid, &value->var) >= 0)
+        if (asn_compare_oid(&tp->oid, &value->oid) >= 0)
             break;
     }
 
@@ -144,8 +144,8 @@ find_node(const snmp_value_t *value, enum snmp_syntax *errp) {
 found:
     /* leafs must have a 0 instance identifier */
     if (tp->type == SNMP_NODE_LEAF &&
-            (value->var.len != tp->oid.len + 1 ||
-             value->var.subs[tp->oid.len] != 0)) {
+            (value->oid.len != tp->oid.len + 1 ||
+             value->oid.subs[tp->oid.len] != 0)) {
         if (TR(FIND))
             snmp_debug("find: bad leaf index");
         *errp = SNMP_SYNTAX_NOSUCHINSTANCE;
@@ -153,7 +153,7 @@ found:
     }
     if (TR(FIND))
         snmp_debug("find: found %s",
-                   asn_oid2str_r(&value->var, oidbuf));
+                   asn_oid2str_r(&value->oid, oidbuf));
     return (tp);
 }
 
@@ -162,7 +162,7 @@ find_subnode(const snmp_value_t *value) {
     struct snmp_node *tp;
 
     for (tp = tree; tp < tree + tree_size; tp++) {
-        if (asn_is_suboid(&value->var, &tp->oid))
+        if (asn_is_suboid(&value->oid, &tp->oid))
             return (tp);
     }
     return (NULL);
@@ -217,7 +217,7 @@ snmp_get(snmp_pdu_t *pdu, asn_buf_t *resp_b,
         return (SNMP_RET_IGN);
 
     for (i = 0; i < pdu->nbindings; i++) {
-        resp->bindings[i].var = pdu->bindings[i].var;
+        resp->bindings[i].oid = pdu->bindings[i].oid;
         if ((tp = find_node(&pdu->bindings[i], &except)) == NULL) {
             if (pdu->version == SNMP_V1) {
                 if (TR(GET))
@@ -286,14 +286,14 @@ next_node(const snmp_value_t *value, int *pnext) {
 
     if (TR(FIND))
         snmp_debug("next: searching %s",
-                   asn_oid2str_r(&value->var, oidbuf));
+                   asn_oid2str_r(&value->oid, oidbuf));
 
     *pnext = 0;
     for (tp = tree; tp < tree + tree_size; tp++) {
-        if (asn_is_suboid(&tp->oid, &value->var)) {
+        if (asn_is_suboid(&tp->oid, &value->oid)) {
             /* the tree OID is a sub-oid of the requested OID. */
             if (tp->type == SNMP_NODE_LEAF) {
-                if (tp->oid.len == value->var.len) {
+                if (tp->oid.len == value->oid.len) {
                     /* request for scalar type */
                     if (TR(FIND))
                         snmp_debug("next: found scalar %s",
@@ -307,8 +307,8 @@ next_node(const snmp_value_t *value, int *pnext) {
                                asn_oid2str_r(&tp->oid, oidbuf));
                 return (tp);
             }
-        } else if (asn_is_suboid(&value->var, &tp->oid) ||
-                   asn_compare_oid(&tp->oid, &value->var) >= 0) {
+        } else if (asn_is_suboid(&value->oid, &tp->oid) ||
+                   asn_compare_oid(&tp->oid, &value->oid) >= 0) {
             if (TR(FIND))
                 snmp_debug("next: found %s",
                            asn_oid2str_r(&tp->oid, oidbuf));
@@ -335,15 +335,15 @@ do_getnext(struct context *context, const snmp_value_t *inb,
     /* retain old variable if we are doing a GETNEXT on an exact
      * matched leaf only */
     if (tp->type == SNMP_NODE_LEAF || next)
-        outb->var = tp->oid;
+        outb->oid = tp->oid;
     else
-        outb->var = inb->var;
+        outb->oid = inb->oid;
 
     for (;;) {
         outb->syntax = tp->syntax;
         if (tp->type == SNMP_NODE_LEAF) {
             /* make a GET operation */
-            outb->var.subs[outb->var.len++] = 0;
+            outb->oid.subs[outb->oid.len++] = 0;
             ret = (*tp->op)(&context->ctx, outb, tp->oid.len,
                             tp->index, SNMP_OP_GET);
         } else {
@@ -355,7 +355,7 @@ do_getnext(struct context *context, const snmp_value_t *inb,
             /* got something */
             if (ret != SNMP_ERR_NOERROR && TR(GETNEXT))
                 snmp_debug("getnext: %s returns %u",
-                           asn_oid2str(&outb->var), ret);
+                           asn_oid2str(&outb->oid), ret);
             break;
         }
 
@@ -367,12 +367,12 @@ do_getnext(struct context *context, const snmp_value_t *inb,
             snmp_debug("getnext: no data - avancing to %s",
                        asn_oid2str(&tp->oid));
 
-        outb->var = tp->oid;
+        outb->oid = tp->oid;
     }
 
     if (ret == SNMP_ERR_NOSUCHNAME) {
 eofMib:
-        outb->var = inb->var;
+        outb->oid = inb->oid;
         if (pdu->version == SNMP_V1) {
             pdu->error_status = SNMP_ERR_NOSUCHNAME;
             return (SNMP_RET_ERR);
@@ -557,7 +557,7 @@ rollback(struct context *context, snmp_pdu_t *pdu, u_int i) {
 
         if (ret != SNMP_ERR_NOERROR) {
             snmp_error("set: rollback failed (%d) on variable %s "
-                       "index %u", ret, asn_oid2str(&b->var), i);
+                       "index %u", ret, asn_oid2str(&b->oid), i);
             if (pdu->version != SNMP_V1) {
                 pdu->error_status = SNMP_ERR_UNDO_FAILED;
                 pdu->error_index = 0;
@@ -671,7 +671,7 @@ snmp_set(snmp_pdu_t *pdu, asn_buf_t *resp_b,
             /* not found altogether or LEAF with wrong index */
             if (TR(SET))
                 snmp_debug("set: node not found %s",
-                           asn_oid2str_r(&b->var, oidbuf));
+                           asn_oid2str_r(&b->oid, oidbuf));
             if (pdu->version == SNMP_V1) {
                 pdu->error_index = i + 1;
                 pdu->error_status = SNMP_ERR_NOSUCHNAME;
@@ -869,7 +869,7 @@ snmp_set(snmp_pdu_t *pdu, asn_buf_t *resp_b,
         if (ret != SNMP_ERR_NOERROR)
             snmp_error("set: commit failed (%d) on"
                        " variable %s index %u", ret,
-                       asn_oid2str_r(&b->var, oidbuf), i);
+                       asn_oid2str_r(&b->oid, oidbuf), i);
     }
 
     if (snmp_fix_encoding(resp_b, resp) != SNMP_CODE_OK) {

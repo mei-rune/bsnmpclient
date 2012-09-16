@@ -2,16 +2,26 @@
 
 #include "bsnmp/config.h"
 #include <stdio.h>
+#include <errno.h>
 
 
 #ifndef HAVE_INET_NTOP
 
-
+#ifndef NS_INT16SZ      
 #define NS_INT16SZ      2
+#endif
+#ifndef NS_INADDRSZ  
 #define NS_INADDRSZ     4
+#endif
+#ifndef NS_IN6ADDRSZ  
 #define NS_IN6ADDRSZ    16
+#endif
+#ifndef EAFNOSUPPORT
 #define EAFNOSUPPORT    WSAEAFNOSUPPORT
+#endif
+#ifndef ENOSPC          
 #define ENOSPC          28
+#endif
 
 static const char *inet_ntop4(const unsigned char *src, char *dst, size_t size) {
     const char *fmt = "%u.%u.%u.%u";

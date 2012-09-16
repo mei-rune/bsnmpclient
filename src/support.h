@@ -38,6 +38,10 @@
 #include <stdlib.h>
 #ifdef __GNUC__
 #include <sys/time.h>
+#ifdef linux
+#define _HAVE_TIMERADD 1
+#define HAVE_TIMERCLEAR 1
+#endif
 #endif
 
 #ifndef HAVE_STRLCPY

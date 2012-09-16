@@ -663,7 +663,7 @@ snmp_import_table(struct snmp_toolinfo *snmptoolctx, struct snmp_oid2str *obj) {
 
     entry->string = obj->string;
     entry->strlen = obj->strlen;
-    asn_append_oid(&(entry->var), &(obj->var));
+    asn_append_oid(&(entry->oid), &(obj->oid));
 
     if ((i = snmp_table_insert(snmptoolctx, entry)) < 0) {
         snmp_index_listfree(&(entry->index_list));
@@ -755,8 +755,8 @@ snmp_import_object(struct snmp_toolinfo *snmptoolctx) {
     oid2str->string = string;
     oid2str->strlen = strlen(nexttok);
 
-    asn_append_oid(&(oid2str->var), &(current_oid));
-    if (snmp_suboid_append(&(oid2str->var), (asn_subid_t) val) < 0)
+    asn_append_oid(&(oid2str->oid), &(current_oid));
+    if (snmp_suboid_append(&(oid2str->oid), (asn_subid_t) val) < 0)
         goto error;
 
     /*

@@ -23,7 +23,9 @@
 #define snprintf   _snprintf
 #define vsnprintf   _vsnprintf
 #define strtoll     _strtoi64
+#ifndef __GNUC__
 #define strtoull    _strtoui64
+#endif
 #define random      rand
 #define strncasecmp _strnicmp
 #define strcasecmp  _stricmp
@@ -32,10 +34,6 @@
 
 #ifndef __func__
 #define __func__ __FUNCTION__
-#endif
-
-#ifndef __unused
-#define __unused
 #endif
 
 #else
@@ -47,7 +45,11 @@
 #ifndef MAXPATHLEN
 #define MAXPATHLEN 1024
 #endif
+#define HAVE_INET_NTOP 1
+#endif
 
+#ifndef __unused
+#define __unused
 #endif
 
 #ifdef __GNUC__

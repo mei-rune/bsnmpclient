@@ -357,7 +357,7 @@ static int table_value(struct snmp_client* client, const struct snmp_table *desc
     for (i = descr->index_size;
             descr->entries[i].syntax != SNMP_SYNTAX_NULL; i++)
         if (descr->entries[i].subid ==
-                b->var.subs[descr->table.len + 1])
+                b->oid.subs[descr->table.len + 1])
             break;
     if (descr->entries[i].syntax == SNMP_SYNTAX_NULL)
         return (0);
@@ -434,12 +434,12 @@ static void table_init_pdu(struct snmp_client* client, const struct snmp_table *
     }
     if (descr->last_change.len != 0) {
         pdu->bindings[pdu->nbindings].syntax = SNMP_SYNTAX_NULL;
-        pdu->bindings[pdu->nbindings].var = descr->last_change;
+        pdu->bindings[pdu->nbindings].oid = descr->last_change;
         pdu->nbindings++;
         if (pdu->version != SNMP_V1)
             pdu->error_status++;
     }
-    pdu->bindings[pdu->nbindings].var = descr->table;
+    pdu->bindings[pdu->nbindings].oid = descr->table;
     pdu->bindings[pdu->nbindings].syntax = SNMP_SYNTAX_NULL;
     pdu->nbindings++;
 }
@@ -470,9 +470,9 @@ static int table_check_response(struct snmp_client* client, struct tabwork *work
 
     for (b = resp->bindings; b < resp->bindings + resp->nbindings; b++) {
         if (work->descr->last_change.len != 0 && b == resp->bindings) {
-            if (!asn_is_suboid(&work->descr->last_change, &b->var) ||
-                    b->var.len != work->descr->last_change.len + 1 ||
-                    b->var.subs[work->descr->last_change.len] != 0) {
+            if (!asn_is_suboid(&work->descr->last_change, &b->oid) ||
+                    b->oid.len != work->descr->last_change.len + 1 ||
+                    b->oid.subs[work->descr->last_change.len] != 0) {
                 seterr(client,
                        "last_change: bad response");
                 return (-1);
@@ -498,11 +498,11 @@ static int table_check_response(struct snmp_client* client, struct tabwork *work
 
             continue;
         }
-        if (!asn_is_suboid(&work->descr->table, &b->var) ||
+        if (!asn_is_suboid(&work->descr->table, &b->oid) ||
                 b->syntax == SNMP_SYNTAX_ENDOFMIBVIEW)
             return (0);
 
-        if ((e = table_find(client, work, &b->var)) == NULL)
+        if ((e = table_find(client, work, &b->oid)) == NULL)
             return (-1);
         if (table_value(client, work->descr, e, b))
             return (-1);
@@ -579,8 +579,8 @@ again:
             goto again;
         }
 
-        work.pdu.bindings[work.pdu.nbindings - 1].var =
-            resp.bindings[resp.nbindings - 1].var;
+        work.pdu.bindings[work.pdu.nbindings - 1].oid =
+            resp.bindings[resp.nbindings - 1].oid;
 
         snmp_pdu_free(&resp);
     }
@@ -667,8 +667,8 @@ again:
 
     /* next part */
 
-    work->pdu.bindings[work->pdu.nbindings - 1].var =
-        resp->bindings[resp->nbindings - 1].var;
+    work->pdu.bindings[work->pdu.nbindings - 1].oid =
+        resp->bindings[resp->nbindings - 1].oid;
 
     snmp_pdu_free(resp);
 
@@ -925,10 +925,18 @@ static int open_client_udp(struct snmp_client *client, const char *host,
     return (0);
 }
 
+#ifndef _WIN32
+
+#ifdef linux
+static void remove_local(int s, struct snmp_client *client) {
+    (void)remove(client->local_path);
+}
+#else
 static void remove_local(struct snmp_client *client) {
     (void)remove(client->local_path);
 }
-#ifndef _WIN32
+#endif
+
 /*
 * Open local socket
 */
@@ -936,6 +944,9 @@ static int open_client_local(struct snmp_client *client, const char *path) {
     struct sockaddr_un sa;
     char *ptr;
     int stype;
+#ifdef SUN_LEN
+    size_t len_unix;
+#endif
 
     if (client->chost == NULL) {
         if ((client->chost = malloc(1 + sizeof(DEFAULT_LOCAL)))
@@ -976,7 +987,11 @@ static int open_client_local(struct snmp_client *client, const char *path) {
     }
 
     sa.sun_family = AF_LOCAL;
+#ifdef SUN_LEN
+    len_unix = SUN_LEN(&sa);
+#else
     sa.sun_len = sizeof(sa);
+#endif
     strcpy(sa.sun_path, client->local_path);
 
     if (bind(client->fd, (struct sockaddr *)&sa, sizeof(sa)) == -1) {
@@ -986,15 +1001,29 @@ static int open_client_local(struct snmp_client *client, const char *path) {
         (void)remove(client->local_path);
         return (-1);
     }
+#ifdef linux
+    on_exit(remove_local, client);
+#else
     atexit(client, remove_local);
+#endif
 
     sa.sun_family = AF_LOCAL;
+
+#ifdef SUN_LEN
+    len_unix = offsetof(struct sockaddr_un, sun_path) +
+                 strlen(client->chost);
+#else
     sa.sun_len = offsetof(struct sockaddr_un, sun_path) +
                  strlen(client->chost);
+#endif
     strncpy(sa.sun_path, client->chost, sizeof(sa.sun_path) - 1);
     sa.sun_path[sizeof(sa.sun_path) - 1] = '\0';
 
+#ifdef SUN_LEN
+    if (connect(client->fd, (struct sockaddr *)&sa, len_unix) == -1) {
+#else
     if (connect(client->fd, (struct sockaddr *)&sa, sa.sun_len) == -1) {
+#endif
         seterr(client, "%s", strerror(errno));
         (void)close(client->fd);
         client->fd = -1;
@@ -1160,7 +1189,7 @@ int snmp_add_binding(struct snmp_v1_pdu *pdu, ...) {
             va_end(ap);
             return (-1);
         }
-        pdu->bindings[pdu->nbindings].var = *oid;
+        pdu->bindings[pdu->nbindings].oid = *oid;
         pdu->bindings[pdu->nbindings].syntax =
             va_arg(ap, enum snmp_syntax);
         pdu->nbindings++;

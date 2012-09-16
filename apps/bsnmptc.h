@@ -85,7 +85,7 @@ typedef char * (*snmp_tc2oid_f) (char *str, asn_oid_t *oid);
 typedef int32_t (*snmp_tc2oct_f) (snmp_value_t *value, char *string);
 
 enum snmp_tc snmp_get_tc(char *str);
-char *snmp_oct2tc(enum snmp_tc tc, uint32_t len, char *octets);
+char *snmp_oct2tc(enum snmp_tc tc, uint32_t len, u_char *octets);
 char *snmp_tc2oid(enum snmp_tc tc, char *str, asn_oid_t *oid);
 int32_t snmp_tc2oct(enum snmp_tc tc, snmp_value_t *value, char *string);
 
