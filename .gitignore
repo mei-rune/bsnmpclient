@@ -5,6 +5,7 @@ generated
 *.xcodeproj
 out/
 *.swp
+*.bak
 
 snmpget
 

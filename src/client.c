@@ -832,7 +832,7 @@ void snmp_client_init(struct snmp_client *c) {
     c->timeout.tv_sec = 3;
     c->timeout.tv_usec = 0;
     c->retries = 3;
-    c->dump_pdus = 0;
+    c->dump_pdus = 1;
     c->txbuflen = c->rxbuflen = 10000;
 
     c->fd = -1;
@@ -1210,6 +1210,21 @@ static int32_t snmp_next_reqid(struct snmp_client * c) {
     return (i);
 }
 
+
+static __inline void dump_hex(const char* s, const u_char* octets, u_int len) {
+    u_int i = 0;
+    if (500 < len) {
+        snmp_printf("%s overflow %lu:", s, len);
+        return;
+    }
+    
+    snmp_printf("%s %lu:", s, len);
+    for (i = 0; i < len; i++)
+       snmp_printf(" %02x", octets[i]);
+    snmp_printf("\n");
+}
+
+
 /*
 * Send request and return request id.
 */
@@ -1233,8 +1248,11 @@ static int32_t snmp_send_packet(struct snmp_client *client, snmp_pdu_t * pdu) {
         return (-1);
     }
 
-    if (client->dump_pdus)
+    if (client->dump_pdus) {
         snmp_pdu_dump(pdu);
+
+		dump_hex("send   :", (const u_char*)buf, (u_int)(b.asn_ptr - buf));
+	}
 
     if ((ret = send(client->fd, (const char*)buf, b.asn_ptr - buf, 0)) == -1) {
 #ifdef _WIN32
@@ -1420,6 +1438,11 @@ static int snmp_receive_packet(struct snmp_client* client,
         return (-1);
     }
 
+	
+    if (client->dump_pdus) {
+		dump_hex("recv   :", (const u_char*)buf, (u_int)(ret));
+	}
+
     abuf.asn_ptr = buf;
     abuf.asn_len = ret;
 
@@ -1433,12 +1456,17 @@ static int snmp_receive_packet(struct snmp_client* client,
     if (SNMP_CODE_OK != (ret = snmp_pdu_decode(&abuf, pdu, &ip))) {
         seterr(client, "snmp_decode_pdu: failed %d", ret);
         free(buf);
+
+		if (client->dump_pdus) {
+			printf("snmp_decode_pdu: failed %d", ret);
+		}
         return (-1);
     }
-
+	
     free(buf);
-    if (client->dump_pdus)
+    if (client->dump_pdus) {
         snmp_pdu_dump(pdu);
+	}
 
     client->engine.engine_time = pdu->engine.engine_time;
     client->engine.engine_boots = pdu->engine.engine_boots;
