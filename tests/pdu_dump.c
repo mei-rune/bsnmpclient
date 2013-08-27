@@ -14,10 +14,10 @@ asn_subid_t oid2[] = {2,3,4,5,6,7,8,9,10,11,12,13};
 void append_bindings(snmp_pdu_t* pdu, asn_subid_t* oid
 	, u_int oid_len, enum snmp_syntax syntax ) {
 
-	pdu->bindings[pdu->nbindings].var.len = oid_len;
-	memcpy(pdu->bindings[pdu->nbindings].var.subs, oid, oid_len*sizeof(oid[0]));
+	pdu->bindings[pdu->nbindings].oid.len = oid_len;
+	memcpy(pdu->bindings[pdu->nbindings].oid.subs, oid, oid_len*sizeof(oid[0]));
 	pdu->bindings[pdu->nbindings].syntax = syntax;
-	pdu->bindings[pdu->nbindings].var.subs[5] = pdu->nbindings + 1;
+	pdu->bindings[pdu->nbindings].oid.subs[5] = pdu->nbindings + 1;
 	pdu->nbindings ++;
 }
 

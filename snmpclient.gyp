@@ -129,5 +129,33 @@
       ],
       'defines': [ 'BUNDLE=1' ]
     }, # bsnmptools
+    {
+      'target_name': 'dump_pdu',
+      'type': 'executable',
+      'dependencies': [
+        'libsnmpclient',
+      ],
+      'sources': [
+        'tests/pdu_dump.c',
+      ],
+      'msvs-settings': {
+        'VCLinkerTool': {
+          'SubSystem': 1, # /subsystem:console
+        },
+      },
+      'conditions': [
+        ['OS == "linux"', {
+          'libraries': ['-ldl'],
+        }],
+        ['OS=="win32" or OS=="win"', {
+          'sources': [    ],
+        }],
+        ['OS=="linux" or OS=="freebsd" or OS=="openbsd" or OS=="solaris"', {
+          'cflags': [ '--std=c89' ],
+          'defines': [ '_GNU_SOURCE' ]
+        }],
+      ],
+      'defines': [ 'BUNDLE=1' ]
+    }, # dump_pdu
   ] # end targets
 }

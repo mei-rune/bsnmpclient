@@ -1378,7 +1378,7 @@ main(int argc, char ** argv) {
         exit(1);
     }
 
-    if (snmp_discover_engine(&snmptoolctx.client, NULL, NULL, NULL)) {
+	if (snmptoolctx.client.version == SNMP_V3 && snmp_discover_engine(&snmptoolctx.client, NULL, NULL, NULL)) {
         warnx("Failed to discover engine: %s.", snmptoolctx.client.error);
         snmp_tool_freeall(&snmptoolctx);
         exit(1);

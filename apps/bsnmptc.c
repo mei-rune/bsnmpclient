@@ -193,7 +193,7 @@ snmp_oct2tc(enum snmp_tc tc, uint32_t len, u_char *octets) {
     else
         tc_len = len;
 
-    if ((buf = malloc(tc_len)) == NULL ) {
+    if ((buf = malloc(tc_len*2)) == NULL ) {
         return (NULL);
     }
 
