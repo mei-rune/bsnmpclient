@@ -71,6 +71,19 @@ void (*snmp_printf)(const char *, ...) = snmp_printf_func;
 
 
 
+static __inline void dump_hex(const char* s, const u_char* octets, u_int len) {
+    u_int i = 0;
+    if (500 < len) {
+        snmp_printf("%s overflow %lu:", s, len);
+        return;
+    }
+    
+    snmp_printf("%s %lu:", s, len);
+    for (i = 0; i < len; i++)
+       snmp_printf(" %02x", octets[i]);
+    snmp_printf("\n");
+}
+
 /*
 * An array of error strings corresponding to error definitions from libbsnmp.
 */
@@ -1162,6 +1175,26 @@ void snmp_pdu_dump(const snmp_pdu_t *pdu) {
     case SNMP_PDU_TRAP2:
     case SNMP_PDU_REPORT:
         snmp_printf("%s %s '%s'", types[pdu->pdu_type], vers, pdu->community);
+        if (pdu->version == SNMP_V3) {
+            snmp_printf(" identifier: %d\n", pdu->identifier);
+            snmp_printf(" context_name: %s\n", pdu->context_name);
+            dump_hex(" context_engine", pdu->context_engine, pdu->context_engine_len);
+            
+            dump_hex(" msg_digest", pdu->msg_digest, SNMP_USM_AUTH_SIZE);
+            dump_hex(" msg_salt", pdu->msg_salt, SNMP_USM_PRIV_SIZE);
+
+            snmp_printf(" user.secname: %s\n", pdu->user.sec_name);
+
+            snmp_printf(" user.auth_proto: %d\n", pdu->user.auth_proto);
+            dump_hex(" user.auth_key", pdu->user.auth_key, pdu->user.auth_len);
+            snmp_printf(" user.priv_proto: %d\n", pdu->user.priv_proto);
+            dump_hex(" user.priv_key", pdu->user.priv_key, pdu->user.priv_len);
+
+            snmp_printf(" engine boots=%d, time=%d, max_msg_size=%d, ", pdu->engine.engine_boots,
+                  pdu->engine.engine_time, pdu->engine.max_msg_size);
+            dump_hex("engine.engine_id: ", pdu->engine.engine_id, pdu->engine.engine_len);
+
+        }
         dump_notrap(pdu);
         break;
 
@@ -1487,7 +1520,7 @@ static enum snmp_code snmp_parse_bad_oid(const asn_oid_t* oid) {
 //        { 1, 3, 6, 1, 6, 3, 15, 1, 1, 6, 0 };
 
     if(11 == oid->len && 0 == memcmp(badOid, oid->subs, sizeof(asn_subid_t) * 9)) {
-        switch(oid->subs[0]) {
+        switch(oid->subs[9]) {
         case 1:
             return SNMP_CODE_BADSECLEVEL;
         case 2:

@@ -832,7 +832,7 @@ void snmp_client_init(struct snmp_client *c) {
     c->timeout.tv_sec = 3;
     c->timeout.tv_usec = 0;
     c->retries = 3;
-    c->dump_pdus = 0;
+    c->dump_pdus = 1;
     c->txbuflen = c->rxbuflen = 10000;
 
     c->fd = -1;
@@ -1252,6 +1252,9 @@ static int32_t snmp_send_packet(struct snmp_client *client, snmp_pdu_t * pdu) {
         snmp_pdu_dump(pdu);
 	}
 
+		dump_hex("send   :", (const u_char*)buf, (u_int)(b.asn_ptr - buf));
+	}
+
     if ((ret = send(client->fd, (const char*)buf, b.asn_ptr - buf, 0)) == -1) {
 #ifdef _WIN32
         seterr(client, "%s", gai_strerror(WSAGetLastError()));
@@ -1436,6 +1439,11 @@ static int snmp_receive_packet(struct snmp_client* client,
         return (-1);
     }
 
+	
+    if (client->dump_pdus) {
+		dump_hex("recv   :", (const u_char*)buf, (u_int)(ret));
+	}
+
     abuf.asn_ptr = buf;
     abuf.asn_len = ret;
 	
@@ -1453,9 +1461,13 @@ static int snmp_receive_packet(struct snmp_client* client,
     if (SNMP_CODE_OK != (ret = snmp_pdu_decode(&abuf, pdu, &ip))) {
         seterr(client, "snmp_decode_pdu: failed %d", ret);
         free(buf);
+
+		if (client->dump_pdus) {
+			printf("snmp_decode_pdu: failed %d", ret);
+		}
         return (-1);
     }
-
+	
     free(buf);
     if (client->dump_pdus) {
         snmp_pdu_dump(pdu);
